@@ -120,6 +120,14 @@ export const Header: React.FC<HeaderProps> = ({ onNavigate }) => {
               {link.name}
             </a>
           ))}
+
+          <Button
+            variant="primary"
+            className="w-full mt-4"
+            onClick={() => handleNavClick("#contact")}
+          >
+            Mulai Proyek
+          </Button>
           <Button
             variant="ghost"
             className="w-full justify-start text-slate-300"
@@ -130,13 +138,6 @@ export const Header: React.FC<HeaderProps> = ({ onNavigate }) => {
             leftIcon={<LogIn className="w-4 h-4" />}
           >
             Login Admin
-          </Button>
-          <Button
-            variant="primary"
-            className="w-full mt-4"
-            onClick={() => handleNavClick("#contact")}
-          >
-            Mulai Proyek
           </Button>
         </div>
       )}
