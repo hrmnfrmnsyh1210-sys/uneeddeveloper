@@ -1,8 +1,12 @@
 import React, { useState, useEffect } from "react";
-import { Menu, X, Code2 } from "lucide-react";
+import { Menu, X, Code2, LogIn } from "lucide-react";
 import { Button } from "./Button";
 
-export const Header: React.FC = () => {
+interface HeaderProps {
+  onNavigate?: (page: "home" | "login") => void;
+}
+
+export const Header: React.FC<HeaderProps> = ({ onNavigate }) => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -19,6 +23,17 @@ export const Header: React.FC = () => {
     { name: "Kontak", href: "#contact" },
   ];
 
+  const handleNavClick = (href: string) => {
+    if (onNavigate) onNavigate("home");
+    setIsMobileMenuOpen(false);
+
+    // Slight delay to allow view change if needed
+    setTimeout(() => {
+      const element = document.querySelector(href);
+      element?.scrollIntoView({ behavior: "smooth" });
+    }, 100);
+  };
+
   return (
     <header
       className={`fixed top-0 left-0 right-0 z-40 transition-all duration-300 ${
@@ -28,12 +43,19 @@ export const Header: React.FC = () => {
       }`}
     >
       <div className="container mx-auto px-6 flex items-center justify-between">
-        <a href="#" className="flex items-center gap-2 group">
+        <a
+          href="#"
+          onClick={(e) => {
+            e.preventDefault();
+            handleNavClick("#");
+          }}
+          className="flex items-center gap-2 group"
+        >
           <div className="bg-indigo-600 p-2 rounded-lg text-white group-hover:scale-105 transition-transform">
             <Code2 className="w-6 h-6" />
           </div>
           <span className="text-xl font-bold text-white tracking-tight">
-            Uneed<span className="text-indigo-400">Developer</span>
+            Uneed<span className="text-indigo-400">Dev</span>
           </span>
         </a>
 
@@ -43,19 +65,27 @@ export const Header: React.FC = () => {
             <a
               key={link.name}
               href={link.href}
+              onClick={(e) => {
+                e.preventDefault();
+                handleNavClick(link.href);
+              }}
               className="text-sm font-medium text-slate-300 hover:text-white transition-colors"
             >
               {link.name}
             </a>
           ))}
           <Button
+            variant="ghost"
+            className="!py-2 !px-4 !text-sm text-slate-300"
+            onClick={() => onNavigate && onNavigate("login")}
+            leftIcon={<LogIn className="w-4 h-4" />}
+          >
+            Login
+          </Button>
+          <Button
             variant="primary"
             className="!py-2 !px-4 !text-sm !rounded-lg"
-            onClick={() =>
-              document
-                .getElementById("contact")
-                ?.scrollIntoView({ behavior: "smooth" })
-            }
+            onClick={() => handleNavClick("#contact")}
           >
             Mulai Proyek
           </Button>
@@ -82,22 +112,32 @@ export const Header: React.FC = () => {
               key={link.name}
               href={link.href}
               className="text-slate-300 hover:text-white font-medium py-2 block border-b border-slate-800 last:border-0"
-              onClick={() => setIsMobileMenuOpen(false)}
+              onClick={(e) => {
+                e.preventDefault();
+                handleNavClick(link.href);
+              }}
             >
               {link.name}
             </a>
           ))}
+
           <Button
             variant="primary"
             className="w-full mt-4"
-            onClick={() => {
-              setIsMobileMenuOpen(false);
-              document
-                .getElementById("contact")
-                ?.scrollIntoView({ behavior: "smooth" });
-            }}
+            onClick={() => handleNavClick("#contact")}
           >
             Mulai Proyek
+          </Button>
+          <Button
+            variant="ghost"
+            className="w-full justify-start text-slate-300"
+            onClick={() => {
+              setIsMobileMenuOpen(false);
+              onNavigate && onNavigate("login");
+            }}
+            leftIcon={<LogIn className="w-4 h-4" />}
+          >
+            Login Admin
           </Button>
         </div>
       )}
