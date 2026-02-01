@@ -20,12 +20,17 @@ export const Login: React.FC<LoginProps> = ({ onLogin, onBack }) => {
 
     // Simulated login delay
     setTimeout(() => {
-      // Simple hardcoded auth for demonstration
-      if (email === "admin@uneed.com" && password === "admin123") {
+      // Use trim() to remove accidental whitespace from copy-pasting
+      const cleanEmail = email.trim();
+      const cleanPass = password.trim();
+
+      if (cleanEmail === "admin@uneed.com" && cleanPass === "admin123") {
         localStorage.setItem("isAuthenticated", "true");
         onLogin();
       } else {
-        setError("Email atau password salah.");
+        setError(
+          "Email atau password salah. Pastikan tidak ada spasi tambahan.",
+        );
         setIsLoading(false);
       }
     }, 1000);
