@@ -10,6 +10,11 @@ import {
   Code2,
   Pencil,
   Download,
+  Cloud,
+  Upload,
+  RefreshCw,
+  Save,
+  PlusCircle,
 } from "lucide-react";
 import { Button } from "./Button";
 import { AdminProject, Transaction } from "../types";
@@ -30,7 +35,7 @@ interface AdminDashboardProps {
 
 export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
   const [activeTab, setActiveTab] = useState<
-    "overview" | "projects" | "revenue" | "reports"
+    "overview" | "projects" | "revenue" | "reports" | "database"
   >("overview");
 
   // Data State with Safe Parsing
@@ -59,6 +64,21 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
     }
     return [];
   });
+
+  // JSONBin Config State
+  const [jsonBinConfig, setJsonBinConfig] = useState({
+    binId: "",
+    apiKey: "",
+  });
+
+  useEffect(() => {
+    const savedConfig = localStorage.getItem("jsonbin_config");
+    if (savedConfig) {
+      setJsonBinConfig(JSON.parse(savedConfig));
+    }
+  }, []);
+
+  const [isSyncing, setIsSyncing] = useState(false);
 
   // Persist data
   useEffect(() => {
@@ -233,6 +253,157 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+  };
+
+  // --- HANDLER: CLOUD SYNC (JSONBin) ---
+  const saveConfig = () => {
+    localStorage.setItem("jsonbin_config", JSON.stringify(jsonBinConfig));
+    alert("Konfigurasi disimpan di browser ini!");
+  };
+
+  // Feature: Create New Bin automatically
+  const handleCreateBin = async () => {
+    if (!jsonBinConfig.apiKey) {
+      alert("Mohon isi Master Key terlebih dahulu sebelum membuat database.");
+      return;
+    }
+
+    if (
+      jsonBinConfig.binId &&
+      !confirm(
+        "Bin ID sudah terisi. Apakah Anda yakin ingin membuat Bin BARU? (Bin ID lama akan diganti)",
+      )
+    ) {
+      return;
+    }
+
+    setIsSyncing(true);
+    try {
+      const response = await fetch("https://api.jsonbin.io/v3/b", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Master-Key": jsonBinConfig.apiKey,
+          "X-Bin-Name": "Uneed Developer DB",
+        },
+        body: JSON.stringify({
+          projects,
+          transactions,
+          lastUpdated: new Date().toISOString(),
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const newBinId = data.metadata.id;
+
+        const newConfig = { ...jsonBinConfig, binId: newBinId };
+        setJsonBinConfig(newConfig);
+        localStorage.setItem("jsonbin_config", JSON.stringify(newConfig));
+
+        alert(
+          `Database berhasil dibuat! Bin ID: ${newBinId} telah disimpan otomatis.`,
+        );
+      } else {
+        const err = await response.json();
+        alert(`Gagal membuat database: ${err.message || "Unknown error"}`);
+      }
+    } catch (error) {
+      console.error(error);
+      alert("Terjadi kesalahan koneksi.");
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  const handleUploadToCloud = async () => {
+    if (!jsonBinConfig.apiKey || !jsonBinConfig.binId) {
+      alert("Mohon isi API Key dan Bin ID terlebih dahulu.");
+      return;
+    }
+
+    setIsSyncing(true);
+    try {
+      const response = await fetch(
+        `https://api.jsonbin.io/v3/b/${jsonBinConfig.binId}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Master-Key": jsonBinConfig.apiKey,
+          },
+          body: JSON.stringify({
+            projects,
+            transactions,
+            lastUpdated: new Date().toISOString(),
+          }),
+        },
+      );
+
+      if (response.ok) {
+        alert("Sukses! Data berhasil di-upload ke Cloud.");
+      } else {
+        const err = await response.json();
+        alert(`Gagal upload: ${err.message || "Unknown error"}`);
+      }
+    } catch (error) {
+      console.error(error);
+      alert("Terjadi kesalahan koneksi.");
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  const handleDownloadFromCloud = async () => {
+    if (!jsonBinConfig.apiKey || !jsonBinConfig.binId) {
+      alert("Mohon isi API Key dan Bin ID terlebih dahulu.");
+      return;
+    }
+
+    if (
+      !confirm(
+        "Peringatan: Data di browser ini akan ditimpa dengan data dari Cloud. Lanjutkan?",
+      )
+    ) {
+      return;
+    }
+
+    setIsSyncing(true);
+    try {
+      const response = await fetch(
+        `https://api.jsonbin.io/v3/b/${jsonBinConfig.binId}`,
+        {
+          method: "GET",
+          headers: {
+            "X-Master-Key": jsonBinConfig.apiKey,
+          },
+        },
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        // Check if data structure is valid
+        if (
+          data.record &&
+          (Array.isArray(data.record.projects) ||
+            Array.isArray(data.record.transactions))
+        ) {
+          setProjects(data.record.projects || []);
+          setTransactions(data.record.transactions || []);
+          alert("Sukses! Data berhasil diambil dari Cloud.");
+        } else {
+          alert("Format data di Cloud tidak valid atau kosong.");
+        }
+      } else {
+        const err = await response.json();
+        alert(`Gagal download: ${err.message || "Unknown error"}`);
+      }
+    } catch (error) {
+      console.error(error);
+      alert("Terjadi kesalahan koneksi.");
+    } finally {
+      setIsSyncing(false);
+    }
   };
 
   // Report Data Gen
@@ -773,6 +944,119 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
             </div>
           </div>
         );
+
+      case "database":
+        return (
+          <div className="space-y-6">
+            <h2 className="text-2xl font-bold text-white">
+              Database Online (JSONBin)
+            </h2>
+            <p className="text-slate-400">
+              Hubungkan aplikasi dengan JSONBin.io untuk menyimpan data secara
+              online.
+            </p>
+
+            <div className="bg-slate-800 p-6 rounded-2xl border border-slate-700 max-w-2xl">
+              <h3 className="text-lg font-bold text-white mb-4">Konfigurasi</h3>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-1">
+                    JSONBin Master Key (X-Master-Key)
+                  </label>
+                  <input
+                    type="password"
+                    placeholder="Contoh: $2a$10$..."
+                    className="w-full bg-slate-900 border border-slate-600 p-3 rounded text-white focus:border-indigo-500 outline-none"
+                    value={jsonBinConfig.apiKey}
+                    onChange={(e) =>
+                      setJsonBinConfig({
+                        ...jsonBinConfig,
+                        apiKey: e.target.value,
+                      })
+                    }
+                  />
+                  <p className="text-xs text-slate-500 mt-1">
+                    Dapatkan key dari dashboard JSONBin.io
+                  </p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-1">
+                    Bin ID
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      placeholder="Contoh: 65a... (Atau klik 'Buat Baru')"
+                      className="w-full bg-slate-900 border border-slate-600 p-3 rounded text-white focus:border-indigo-500 outline-none"
+                      value={jsonBinConfig.binId}
+                      onChange={(e) =>
+                        setJsonBinConfig({
+                          ...jsonBinConfig,
+                          binId: e.target.value,
+                        })
+                      }
+                    />
+                    <Button
+                      onClick={handleCreateBin}
+                      isLoading={isSyncing}
+                      variant="secondary"
+                      className="whitespace-nowrap bg-teal-600 hover:bg-teal-500"
+                      leftIcon={<PlusCircle className="w-4 h-4" />}
+                    >
+                      Buat Baru (Auto)
+                    </Button>
+                  </div>
+                </div>
+                <div className="flex justify-end">
+                  <Button
+                    onClick={saveConfig}
+                    variant="primary"
+                    leftIcon={<Save className="w-4 h-4" />}
+                  >
+                    Simpan Konfigurasi
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-2xl">
+              <div className="bg-indigo-900/20 p-6 rounded-2xl border border-indigo-500/30">
+                <h3 className="text-lg font-bold text-white mb-2 flex items-center gap-2">
+                  <Upload className="w-5 h-5 text-indigo-400" /> Upload ke Cloud
+                </h3>
+                <p className="text-sm text-slate-400 mb-4">
+                  Kirim data yang ada di dashboard ini ke database online. Data
+                  lama di cloud akan tertimpa.
+                </p>
+                <Button
+                  onClick={handleUploadToCloud}
+                  isLoading={isSyncing}
+                  className="w-full bg-indigo-600 hover:bg-indigo-500"
+                >
+                  Upload Data (Backup)
+                </Button>
+              </div>
+
+              <div className="bg-teal-900/20 p-6 rounded-2xl border border-teal-500/30">
+                <h3 className="text-lg font-bold text-white mb-2 flex items-center gap-2">
+                  <RefreshCw className="w-5 h-5 text-teal-400" /> Download dari
+                  Cloud
+                </h3>
+                <p className="text-sm text-slate-400 mb-4">
+                  Ambil data dari database online. Data di dashboard ini akan
+                  diganti dengan data dari cloud.
+                </p>
+                <Button
+                  onClick={handleDownloadFromCloud}
+                  isLoading={isSyncing}
+                  variant="secondary"
+                  className="w-full"
+                >
+                  Download Data (Sync)
+                </Button>
+              </div>
+            </div>
+          </div>
+        );
     }
   };
 
@@ -815,6 +1099,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
           >
             <BarChart3 className="w-5 h-5" />
             <span>Laporan</span>
+          </button>
+          <button
+            onClick={() => setActiveTab("database")}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${activeTab === "database" ? "bg-indigo-600 text-white" : "text-slate-400 hover:bg-slate-800 hover:text-white"}`}
+          >
+            <Cloud className="w-5 h-5" />
+            <span>Database</span>
           </button>
         </nav>
 
