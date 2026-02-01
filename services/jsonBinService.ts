@@ -1,9 +1,10 @@
 import { API } from "../constants";
-import { AdminProject, Transaction } from "../types";
+import { AdminProject, Transaction, TeamMember } from "../types";
 
 export interface CloudData {
   projects: AdminProject[];
   transactions: Transaction[];
+  teamMembers: TeamMember[];
   lastUpdated: string;
 }
 

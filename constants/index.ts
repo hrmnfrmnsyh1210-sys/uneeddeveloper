@@ -22,6 +22,7 @@ export const STORAGE_KEYS = {
   ADMIN_PROJECTS: "admin_projects",
   ADMIN_TRANSACTIONS: "admin_transactions",
   JSONBIN_CONFIG: "jsonbin_config",
+  TEAM_MEMBERS: "admin_team_members",
 } as const;
 
 // ===== API =====
@@ -37,7 +38,7 @@ export const NAV_LINKS = [
 ] as const;
 
 // ===== Admin Tabs =====
-export type AdminTab = "overview" | "projects" | "revenue" | "reports" | "database";
+export type AdminTab = "overview" | "projects" | "revenue" | "team" | "reports" | "database";
 
 // ===== Project Status & Transaction Type =====
 export const PROJECT_STATUSES = ["Pending", "In Progress", "Completed", "Cancelled"] as const;

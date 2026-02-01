@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import {
   AdminProject,
   Transaction,
+  TeamMember,
   SyncStatus,
   JsonBinConfig,
   ProjectStatus,
@@ -24,6 +25,9 @@ export const useAdminData = () => {
   const [transactions, setTransactions] = useState<Transaction[]>(() =>
     parseLocalStorage(STORAGE_KEYS.ADMIN_TRANSACTIONS, [])
   );
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>(() =>
+    parseLocalStorage(STORAGE_KEYS.TEAM_MEMBERS, [])
+  );
 
   // ===== Cloud Config =====
   const [jsonBinConfig, setJsonBinConfig] = useState<JsonBinConfig>({
@@ -38,6 +42,11 @@ export const useAdminData = () => {
   const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
   const [newProject, setNewProject] = useState<Partial<AdminProject>>(DEFAULT_PROJECT_FORM);
 
+  // ===== Team Member Form State =====
+  const [showAddMember, setShowAddMember] = useState(false);
+  const [editingMemberId, setEditingMemberId] = useState<string | null>(null);
+  const [newMember, setNewMember] = useState<Partial<TeamMember>>({});
+
   // ===== Transaction Form State =====
   const [showAddTrans, setShowAddTrans] = useState(false);
   const [editingTransId, setEditingTransId] = useState<string | null>(null);
@@ -51,6 +60,10 @@ export const useAdminData = () => {
   useEffect(() => {
     localStorage.setItem(STORAGE_KEYS.ADMIN_TRANSACTIONS, JSON.stringify(transactions));
   }, [transactions]);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.TEAM_MEMBERS, JSON.stringify(teamMembers));
+  }, [teamMembers]);
 
   // ===== Load Cloud Config on mount =====
   useEffect(() => {
@@ -76,10 +89,13 @@ export const useAdminData = () => {
       if (record) {
         const cloudProjects = record.projects || [];
         const cloudTransactions = record.transactions || [];
+        const cloudTeamMembers = record.teamMembers || [];
         setProjects(cloudProjects);
         setTransactions(cloudTransactions);
+        setTeamMembers(cloudTeamMembers);
         localStorage.setItem(STORAGE_KEYS.ADMIN_PROJECTS, JSON.stringify(cloudProjects));
         localStorage.setItem(STORAGE_KEYS.ADMIN_TRANSACTIONS, JSON.stringify(cloudTransactions));
+        localStorage.setItem(STORAGE_KEYS.TEAM_MEMBERS, JSON.stringify(cloudTeamMembers));
         setSyncStatus("success");
         resetSyncStatus();
       }
@@ -93,7 +109,8 @@ export const useAdminData = () => {
 
   const handleSaveToCloud = async (
     currentProjects: AdminProject[],
-    currentTransactions: Transaction[]
+    currentTransactions: Transaction[],
+    currentTeamMembers?: TeamMember[]
   ) => {
     if (!jsonBinConfig.binId || !jsonBinConfig.apiKey) return;
     setIsSyncing(true);
@@ -101,6 +118,7 @@ export const useAdminData = () => {
       const payload: CloudData = {
         projects: currentProjects,
         transactions: currentTransactions,
+        teamMembers: currentTeamMembers ?? teamMembers,
         lastUpdated: new Date().toISOString(),
       };
       const ok = await updateBin(jsonBinConfig.binId, jsonBinConfig.apiKey, payload);
@@ -254,6 +272,7 @@ export const useAdminData = () => {
     const data = {
       projects,
       transactions,
+      teamMembers,
       exportedAt: new Date().toISOString(),
       app: "Uneed Developer Admin",
     };
@@ -296,6 +315,7 @@ export const useAdminData = () => {
       const payload: CloudData = {
         projects,
         transactions,
+        teamMembers,
         lastUpdated: new Date().toISOString(),
       };
       const newBinId = await createBin(jsonBinConfig.apiKey, payload);
@@ -326,6 +346,77 @@ export const useAdminData = () => {
     }
     await handleFetchFromCloud(jsonBinConfig.binId, jsonBinConfig.apiKey);
     alert("Sukses download data dari cloud!");
+  };
+
+  // ===== Team Member CRUD =====
+  const handleSaveMember = async () => {
+    if (!newMember.name || !newMember.role) {
+      alert("Mohon lengkapi nama dan role anggota tim.");
+      return;
+    }
+
+    let updatedMembers: TeamMember[];
+
+    if (editingMemberId) {
+      updatedMembers = teamMembers.map((m) =>
+        m.id === editingMemberId ? ({ ...m, ...newMember } as TeamMember) : m
+      );
+      setEditingMemberId(null);
+    } else {
+      const member: TeamMember = {
+        id: generateId(),
+        name: newMember.name,
+        role: newMember.role,
+      };
+      updatedMembers = [...teamMembers, member];
+    }
+
+    setTeamMembers(updatedMembers);
+    await handleSaveToCloud(projects, transactions, updatedMembers);
+    setShowAddMember(false);
+    setNewMember({});
+  };
+
+  const handleEditMemberClick = (member: TeamMember) => {
+    setNewMember(member);
+    setEditingMemberId(member.id);
+    setShowAddMember(true);
+  };
+
+  const handleDeleteMember = async (id: string) => {
+    if (confirm("Yakin ingin menghapus anggota tim ini?")) {
+      const updatedMembers = teamMembers.filter((m) => m.id !== id);
+      setTeamMembers(updatedMembers);
+      await handleSaveToCloud(projects, transactions, updatedMembers);
+    }
+  };
+
+  const handleCancelMember = () => {
+    setShowAddMember(false);
+    setEditingMemberId(null);
+    setNewMember({});
+  };
+
+  const handleOpenAddMember = () => {
+    setEditingMemberId(null);
+    setNewMember({});
+    setShowAddMember(true);
+  };
+
+  // ===== Derived: Revenue per Team Member =====
+  const getMemberRevenue = (memberId: string): number => {
+    return transactions.reduce((total, t) => {
+      if (t.type !== "Income" || !t.splits) return total;
+      const split = t.splits.find((s) => s.memberId === memberId);
+      return total + (split?.amount || 0);
+    }, 0);
+  };
+
+  const getTotalSplitRevenue = (): number => {
+    return transactions.reduce((total, t) => {
+      if (t.type !== "Income" || !t.splits) return total;
+      return total + t.splits.reduce((sum, s) => sum + s.amount, 0);
+    }, 0);
   };
 
   // ===== Chart Data =====
@@ -390,6 +481,19 @@ export const useAdminData = () => {
     handleCreateBin,
     handleUploadToCloud,
     handleDownloadFromCloud,
+    // Team Members
+    teamMembers,
+    showAddMember,
+    editingMemberId,
+    newMember,
+    setNewMember,
+    handleSaveMember,
+    handleEditMemberClick,
+    handleDeleteMember,
+    handleCancelMember,
+    handleOpenAddMember,
+    getMemberRevenue,
+    getTotalSplitRevenue,
     // Reports
     handleExportData,
     getMonthlyRevenue,

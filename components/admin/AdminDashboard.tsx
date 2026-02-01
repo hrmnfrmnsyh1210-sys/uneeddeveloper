@@ -9,12 +9,14 @@ import {
   Code2,
   Menu,
   X,
+  Users,
 } from "lucide-react";
 import { AdminTab } from "../../constants";
 import { useAdminData } from "./useAdminData";
 import { AdminOverview } from "./AdminOverview";
 import { AdminProjects } from "./AdminProjects";
 import { AdminRevenue } from "./AdminRevenue";
+import { AdminTeam } from "./AdminTeam";
 import { AdminReports } from "./AdminReports";
 import { AdminDatabase } from "./AdminDatabase";
 
@@ -26,6 +28,7 @@ const TABS: { id: AdminTab; label: string; icon: React.ReactNode }[] = [
   { id: "overview", label: "Overview", icon: <LayoutDashboard className="w-5 h-5" /> },
   { id: "projects", label: "Projects", icon: <FolderKanban className="w-5 h-5" /> },
   { id: "revenue", label: "Pendapatan", icon: <DollarSign className="w-5 h-5" /> },
+  { id: "team", label: "Tim", icon: <Users className="w-5 h-5" /> },
   { id: "reports", label: "Laporan", icon: <BarChart3 className="w-5 h-5" /> },
   { id: "database", label: "Database", icon: <Cloud className="w-5 h-5" /> },
 ];
@@ -73,6 +76,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
           <AdminRevenue
             transactions={data.transactions}
             projects={data.projects}
+            teamMembers={data.teamMembers}
             showAddTrans={data.showAddTrans}
             editingTransId={data.editingTransId}
             newTrans={data.newTrans}
@@ -83,6 +87,24 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
             onDelete={data.handleDeleteTrans}
             onCancel={data.handleCancelTrans}
             onAdd={data.handleOpenAddTrans}
+          />
+        );
+      case "team":
+        return (
+          <AdminTeam
+            teamMembers={data.teamMembers}
+            showAddMember={data.showAddMember}
+            editingMemberId={data.editingMemberId}
+            newMember={data.newMember}
+            setNewMember={data.setNewMember}
+            isSyncing={data.isSyncing}
+            onSave={data.handleSaveMember}
+            onEdit={data.handleEditMemberClick}
+            onDelete={data.handleDeleteMember}
+            onCancel={data.handleCancelMember}
+            onAdd={data.handleOpenAddMember}
+            getMemberRevenue={data.getMemberRevenue}
+            getTotalSplitRevenue={data.getTotalSplitRevenue}
           />
         );
       case "reports":

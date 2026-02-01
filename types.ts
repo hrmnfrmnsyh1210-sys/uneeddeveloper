@@ -51,6 +51,17 @@ export interface AdminProject {
   deadline: string;
 }
 
+export interface TeamMember {
+  id: string;
+  name: string;
+  role: string;
+}
+
+export interface RevenueSplit {
+  memberId: string;
+  amount: number;
+}
+
 export interface Transaction {
   id: string;
   date: string;
@@ -58,6 +69,7 @@ export interface Transaction {
   amount: number;
   projectId: string;
   type: TransactionType;
+  splits?: RevenueSplit[];
 }
 
 // ===== Sync Types =====
