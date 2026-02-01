@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   LayoutDashboard,
   FolderKanban,
@@ -15,6 +15,8 @@ import {
   RefreshCw,
   Save,
   PlusCircle,
+  CheckCircle2,
+  AlertCircle,
 } from "lucide-react";
 import { Button } from "./Button";
 import { AdminProject, Transaction } from "../types";
@@ -71,16 +73,26 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
     apiKey: "",
   });
 
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncStatus, setSyncStatus] = useState<"idle" | "success" | "error">(
+    "idle",
+  );
+
+  // Load Config
   useEffect(() => {
     const savedConfig = localStorage.getItem("jsonbin_config");
     if (savedConfig) {
-      setJsonBinConfig(JSON.parse(savedConfig));
+      const parsedConfig = JSON.parse(savedConfig);
+      setJsonBinConfig(parsedConfig);
+
+      // AUTO LOAD: If config exists, fetch data immediately on mount
+      if (parsedConfig.binId && parsedConfig.apiKey) {
+        fetchFromCloud(parsedConfig.binId, parsedConfig.apiKey);
+      }
     }
   }, []);
 
-  const [isSyncing, setIsSyncing] = useState(false);
-
-  // Persist data
+  // Persist data locally
   useEffect(() => {
     localStorage.setItem("admin_projects", JSON.stringify(projects));
   }, [projects]);
@@ -88,6 +100,89 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
   useEffect(() => {
     localStorage.setItem("admin_transactions", JSON.stringify(transactions));
   }, [transactions]);
+
+  // --- HELPER: CLOUD SYNC FUNCTIONS ---
+
+  const fetchFromCloud = async (binId: string, apiKey: string) => {
+    if (!binId || !apiKey) return;
+    setIsSyncing(true);
+    try {
+      const response = await fetch(`https://api.jsonbin.io/v3/b/${binId}`, {
+        method: "GET",
+        headers: { "X-Master-Key": apiKey },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.record) {
+          // Update Local State
+          setProjects((prev) => {
+            // Prefer cloud data, fallback to empty array if undefined
+            const cloudProjects = data.record.projects || [];
+            localStorage.setItem(
+              "admin_projects",
+              JSON.stringify(cloudProjects),
+            );
+            return cloudProjects;
+          });
+          setTransactions((prev) => {
+            const cloudTransactions = data.record.transactions || [];
+            localStorage.setItem(
+              "admin_transactions",
+              JSON.stringify(cloudTransactions),
+            );
+            return cloudTransactions;
+          });
+          setSyncStatus("success");
+          setTimeout(() => setSyncStatus("idle"), 3000);
+        }
+      }
+    } catch (error) {
+      console.error("Auto-load failed", error);
+      setSyncStatus("error");
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  const saveToCloud = async (
+    currentProjects: AdminProject[],
+    currentTransactions: Transaction[],
+  ) => {
+    // Only save if config exists
+    if (!jsonBinConfig.binId || !jsonBinConfig.apiKey) return;
+
+    setIsSyncing(true);
+    try {
+      const response = await fetch(
+        `https://api.jsonbin.io/v3/b/${jsonBinConfig.binId}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Master-Key": jsonBinConfig.apiKey,
+          },
+          body: JSON.stringify({
+            projects: currentProjects,
+            transactions: currentTransactions,
+            lastUpdated: new Date().toISOString(),
+          }),
+        },
+      );
+
+      if (response.ok) {
+        setSyncStatus("success");
+        setTimeout(() => setSyncStatus("idle"), 3000);
+      } else {
+        setSyncStatus("error");
+      }
+    } catch (error) {
+      console.error("Auto-save failed", error);
+      setSyncStatus("error");
+    } finally {
+      setIsSyncing(false);
+    }
+  };
 
   // Derived Stats
   const totalRevenue = transactions
@@ -123,16 +218,16 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
 
   // --- HANDLERS: PROJECTS ---
 
-  const handleSaveProject = () => {
+  const handleSaveProject = async () => {
     if (newProject.name && newProject.client && newProject.value) {
+      let updatedProjects = [...projects];
+
       if (editingProjectId) {
         // UPDATE MODE
-        setProjects((prev) =>
-          prev.map((p) =>
-            p.id === editingProjectId
-              ? ({ ...p, ...newProject } as AdminProject)
-              : p,
-          ),
+        updatedProjects = projects.map((p) =>
+          p.id === editingProjectId
+            ? ({ ...p, ...newProject } as AdminProject)
+            : p,
         );
         setEditingProjectId(null);
       } else {
@@ -145,8 +240,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
           status: newProject.status as any,
           deadline: newProject.deadline || "",
         };
-        setProjects((prev) => [...prev, project]);
+        updatedProjects = [...projects, project];
       }
+
+      setProjects(updatedProjects);
+
+      // AUTO SAVE TO CLOUD
+      await saveToCloud(updatedProjects, transactions);
 
       // Reset Form
       setShowAddProject(false);
@@ -162,9 +262,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
     setShowAddProject(true);
   };
 
-  const handleDeleteProject = (id: string) => {
+  const handleDeleteProject = async (id: string) => {
     if (confirm("Yakin ingin menghapus project ini secara permanen?")) {
-      setProjects((prev) => prev.filter((p) => p.id !== id));
+      const updatedProjects = projects.filter((p) => p.id !== id);
+      setProjects(updatedProjects);
+
+      // AUTO SAVE TO CLOUD
+      await saveToCloud(updatedProjects, transactions);
     }
   };
 
@@ -176,16 +280,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
 
   // --- HANDLERS: TRANSACTIONS ---
 
-  const handleSaveTrans = () => {
+  const handleSaveTrans = async () => {
     if (newTrans.description && newTrans.amount) {
+      let updatedTransactions = [...transactions];
+
       if (editingTransId) {
         // UPDATE MODE
-        setTransactions((prev) =>
-          prev.map((t) =>
-            t.id === editingTransId
-              ? ({ ...t, ...newTrans } as Transaction)
-              : t,
-          ),
+        updatedTransactions = transactions.map((t) =>
+          t.id === editingTransId ? ({ ...t, ...newTrans } as Transaction) : t,
         );
         setEditingTransId(null);
       } else {
@@ -198,8 +300,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
           projectId: newTrans.projectId || "",
           type: newTrans.type as any,
         };
-        setTransactions((prev) => [...prev, trans]);
+        updatedTransactions = [...transactions, trans];
       }
+
+      setTransactions(updatedTransactions);
+
+      // AUTO SAVE TO CLOUD
+      await saveToCloud(projects, updatedTransactions);
 
       // Reset Form
       setShowAddTrans(false);
@@ -218,9 +325,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
     setShowAddTrans(true);
   };
 
-  const handleDeleteTrans = (id: string) => {
+  const handleDeleteTrans = async (id: string) => {
     if (confirm("Hapus transaksi ini? Data akan hilang permanen.")) {
-      setTransactions((prev) => prev.filter((t) => t.id !== id));
+      const updatedTransactions = transactions.filter((t) => t.id !== id);
+      setTransactions(updatedTransactions);
+
+      // AUTO SAVE TO CLOUD
+      await saveToCloud(projects, updatedTransactions);
     }
   };
 
@@ -255,10 +366,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
     URL.revokeObjectURL(url);
   };
 
-  // --- HANDLER: CLOUD SYNC (JSONBin) ---
+  // --- HANDLER: CLOUD CONFIG ---
   const saveConfig = () => {
     localStorage.setItem("jsonbin_config", JSON.stringify(jsonBinConfig));
-    alert("Konfigurasi disimpan di browser ini!");
+    alert("Konfigurasi disimpan! Sistem akan otomatis memuat data...");
+    fetchFromCloud(jsonBinConfig.binId, jsonBinConfig.apiKey);
   };
 
   // Feature: Create New Bin automatically
@@ -316,42 +428,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
     }
   };
 
+  // Manual Trigger
   const handleUploadToCloud = async () => {
-    if (!jsonBinConfig.apiKey || !jsonBinConfig.binId) {
-      alert("Mohon isi API Key dan Bin ID terlebih dahulu.");
-      return;
-    }
-
-    setIsSyncing(true);
-    try {
-      const response = await fetch(
-        `https://api.jsonbin.io/v3/b/${jsonBinConfig.binId}`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            "X-Master-Key": jsonBinConfig.apiKey,
-          },
-          body: JSON.stringify({
-            projects,
-            transactions,
-            lastUpdated: new Date().toISOString(),
-          }),
-        },
-      );
-
-      if (response.ok) {
-        alert("Sukses! Data berhasil di-upload ke Cloud.");
-      } else {
-        const err = await response.json();
-        alert(`Gagal upload: ${err.message || "Unknown error"}`);
-      }
-    } catch (error) {
-      console.error(error);
-      alert("Terjadi kesalahan koneksi.");
-    } finally {
-      setIsSyncing(false);
-    }
+    await saveToCloud(projects, transactions);
+    alert("Sukses upload data ke cloud!");
   };
 
   const handleDownloadFromCloud = async () => {
@@ -359,7 +439,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
       alert("Mohon isi API Key dan Bin ID terlebih dahulu.");
       return;
     }
-
     if (
       !confirm(
         "Peringatan: Data di browser ini akan ditimpa dengan data dari Cloud. Lanjutkan?",
@@ -367,43 +446,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
     ) {
       return;
     }
-
-    setIsSyncing(true);
-    try {
-      const response = await fetch(
-        `https://api.jsonbin.io/v3/b/${jsonBinConfig.binId}`,
-        {
-          method: "GET",
-          headers: {
-            "X-Master-Key": jsonBinConfig.apiKey,
-          },
-        },
-      );
-
-      if (response.ok) {
-        const data = await response.json();
-        // Check if data structure is valid
-        if (
-          data.record &&
-          (Array.isArray(data.record.projects) ||
-            Array.isArray(data.record.transactions))
-        ) {
-          setProjects(data.record.projects || []);
-          setTransactions(data.record.transactions || []);
-          alert("Sukses! Data berhasil diambil dari Cloud.");
-        } else {
-          alert("Format data di Cloud tidak valid atau kosong.");
-        }
-      } else {
-        const err = await response.json();
-        alert(`Gagal download: ${err.message || "Unknown error"}`);
-      }
-    } catch (error) {
-      console.error(error);
-      alert("Terjadi kesalahan koneksi.");
-    } finally {
-      setIsSyncing(false);
-    }
+    await fetchFromCloud(jsonBinConfig.binId, jsonBinConfig.apiKey);
+    alert("Sukses download data dari cloud!");
   };
 
   // Report Data Gen
@@ -611,8 +655,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                   <Button variant="ghost" onClick={handleCancelProject}>
                     Batal
                   </Button>
-                  <Button onClick={handleSaveProject}>
-                    {editingProjectId ? "Update" : "Simpan"}
+                  <Button onClick={handleSaveProject} isLoading={isSyncing}>
+                    {editingProjectId ? "Update & Sync" : "Simpan & Sync"}
                   </Button>
                 </div>
               </div>
@@ -779,8 +823,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                   <Button
                     onClick={handleSaveTrans}
                     className="bg-green-600 hover:bg-green-500"
+                    isLoading={isSyncing}
                   >
-                    {editingTransId ? "Update" : "Simpan"}
+                    {editingTransId ? "Update & Sync" : "Simpan & Sync"}
                   </Button>
                 </div>
               </div>
@@ -948,13 +993,42 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
       case "database":
         return (
           <div className="space-y-6">
-            <h2 className="text-2xl font-bold text-white">
-              Database Online (JSONBin)
-            </h2>
-            <p className="text-slate-400">
-              Hubungkan aplikasi dengan JSONBin.io untuk menyimpan data secara
-              online.
-            </p>
+            <div className="flex items-center justify-between">
+              <h2 className="text-2xl font-bold text-white">
+                Database Online (JSONBin)
+              </h2>
+              {syncStatus === "success" && (
+                <span className="text-green-400 flex items-center gap-2 text-sm">
+                  <CheckCircle2 className="w-4 h-4" /> Terhubung
+                </span>
+              )}
+              {syncStatus === "error" && (
+                <span className="text-red-400 flex items-center gap-2 text-sm">
+                  <AlertCircle className="w-4 h-4" /> Gagal Terhubung
+                </span>
+              )}
+            </div>
+
+            <div className="bg-blue-900/20 border border-blue-500/30 p-4 rounded-xl text-blue-200 text-sm">
+              <p className="font-bold mb-1">
+                Agar data muncul di perangkat lain:
+              </p>
+              <ol className="list-decimal list-inside space-y-1">
+                <li>
+                  Copy <strong>API Key</strong> dan <strong>Bin ID</strong> dari
+                  perangkat ini.
+                </li>
+                <li>
+                  Buka website ini di perangkat baru, login Admin, dan buka menu
+                  Database.
+                </li>
+                <li>
+                  Paste API Key dan Bin ID tersebut, lalu klik "Simpan
+                  Konfigurasi".
+                </li>
+                <li>Data akan otomatis ter-download.</li>
+              </ol>
+            </div>
 
             <div className="bg-slate-800 p-6 rounded-2xl border border-slate-700 max-w-2xl">
               <h3 className="text-lg font-bold text-white mb-4">Konfigurasi</h3>
@@ -1012,7 +1086,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                     variant="primary"
                     leftIcon={<Save className="w-4 h-4" />}
                   >
-                    Simpan Konfigurasi
+                    Simpan & Load Data
                   </Button>
                 </div>
               </div>
@@ -1021,29 +1095,26 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-2xl">
               <div className="bg-indigo-900/20 p-6 rounded-2xl border border-indigo-500/30">
                 <h3 className="text-lg font-bold text-white mb-2 flex items-center gap-2">
-                  <Upload className="w-5 h-5 text-indigo-400" /> Upload ke Cloud
+                  <Upload className="w-5 h-5 text-indigo-400" /> Force Upload
                 </h3>
                 <p className="text-sm text-slate-400 mb-4">
-                  Kirim data yang ada di dashboard ini ke database online. Data
-                  lama di cloud akan tertimpa.
+                  Paksa upload data saat ini ke cloud (menimpa data cloud).
                 </p>
                 <Button
                   onClick={handleUploadToCloud}
                   isLoading={isSyncing}
                   className="w-full bg-indigo-600 hover:bg-indigo-500"
                 >
-                  Upload Data (Backup)
+                  Upload Manual
                 </Button>
               </div>
 
               <div className="bg-teal-900/20 p-6 rounded-2xl border border-teal-500/30">
                 <h3 className="text-lg font-bold text-white mb-2 flex items-center gap-2">
-                  <RefreshCw className="w-5 h-5 text-teal-400" /> Download dari
-                  Cloud
+                  <RefreshCw className="w-5 h-5 text-teal-400" /> Force Download
                 </h3>
                 <p className="text-sm text-slate-400 mb-4">
-                  Ambil data dari database online. Data di dashboard ini akan
-                  diganti dengan data dari cloud.
+                  Paksa ambil data dari cloud (menimpa data lokal).
                 </p>
                 <Button
                   onClick={handleDownloadFromCloud}
@@ -1051,7 +1122,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                   variant="secondary"
                   className="w-full"
                 >
-                  Download Data (Sync)
+                  Download Manual
                 </Button>
               </div>
             </div>
@@ -1104,7 +1175,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
             onClick={() => setActiveTab("database")}
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${activeTab === "database" ? "bg-indigo-600 text-white" : "text-slate-400 hover:bg-slate-800 hover:text-white"}`}
           >
-            <Cloud className="w-5 h-5" />
+            <Cloud
+              className={`w-5 h-5 ${syncStatus === "success" ? "text-green-400" : ""}`}
+            />
             <span>Database</span>
           </button>
         </nav>
