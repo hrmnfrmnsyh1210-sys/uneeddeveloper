@@ -52,7 +52,7 @@ export const Header: React.FC<HeaderProps> = ({ onNavigate }) => {
             <Code2 className="w-6 h-6" />
           </div>
           <span className="text-xl font-bold text-white tracking-tight">
-            Uneed<span className="text-indigo-400">Dev</span>
+            Uneed<span className="text-indigo-400">Developer</span>
           </span>
         </a>
 
@@ -93,7 +93,11 @@ export const Header: React.FC<HeaderProps> = ({ onNavigate }) => {
           className="md:hidden text-white"
           onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
         >
-          {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+          {isMobileMenuOpen ? (
+            <X className="w-6 h-6" />
+          ) : (
+            <Menu className="w-6 h-6" />
+          )}
         </button>
       </div>
 

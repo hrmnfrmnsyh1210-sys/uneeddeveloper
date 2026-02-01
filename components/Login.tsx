@@ -27,7 +27,9 @@ export const Login: React.FC<LoginProps> = ({ onLogin, onBack }) => {
         localStorage.setItem(STORAGE_KEYS.IS_AUTHENTICATED, "true");
         onLogin();
       } else {
-        setError("Email atau password salah. Pastikan tidak ada spasi tambahan.");
+        setError(
+          "Email atau password salah. Pastikan tidak ada spasi tambahan.",
+        );
         setIsLoading(false);
       }
     }, LOGIN_SIMULATION_DELAY);
@@ -101,24 +103,6 @@ export const Login: React.FC<LoginProps> = ({ onLogin, onBack }) => {
               Sign In
             </Button>
           </form>
-
-          {/* Demo Credentials Hint */}
-          <div className="mt-8 pt-6 border-t border-slate-800">
-            <div className="flex items-start gap-3 bg-indigo-500/10 p-4 rounded-xl border border-indigo-500/20">
-              <Info className="w-5 h-5 text-indigo-400 flex-shrink-0 mt-0.5" />
-              <div className="text-sm">
-                <p className="text-indigo-300 font-semibold mb-1">
-                  Demo Access Credentials:
-                </p>
-                <div className="grid grid-cols-[60px_1fr] gap-1 text-slate-400">
-                  <span>Email:</span>
-                  <code className="text-indigo-200">{AUTH.EMAIL}</code>
-                  <span>Pass:</span>
-                  <code className="text-indigo-200">{AUTH.PASSWORD}</code>
-                </div>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
     </div>
