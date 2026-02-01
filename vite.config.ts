@@ -17,6 +17,7 @@ export default defineConfig({
         "react",
         "react-dom",
         "react-dom/client",
+        "react/jsx-runtime",
         "lucide-react",
         "recharts",
         "@google/genai",
