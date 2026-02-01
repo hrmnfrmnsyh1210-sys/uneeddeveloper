@@ -17,6 +17,8 @@ import {
   PlusCircle,
   CheckCircle2,
   AlertCircle,
+  Menu,
+  X,
 } from "lucide-react";
 import { Button } from "./Button";
 import { AdminProject, Transaction } from "../types";
@@ -39,6 +41,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
   const [activeTab, setActiveTab] = useState<
     "overview" | "projects" | "revenue" | "reports" | "database"
   >("overview");
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   // Data State with Safe Parsing
   const [projects, setProjects] = useState<AdminProject[]>(() => {
@@ -476,6 +479,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
     return data;
   };
 
+  const handleNavClick = (tab: typeof activeTab) => {
+    setActiveTab(tab);
+    setIsMobileMenuOpen(false);
+  };
+
   const renderContent = () => {
     switch (activeTab) {
       case "overview":
@@ -577,7 +585,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
       case "projects":
         return (
           <div className="space-y-6">
-            <div className="flex justify-between items-center">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
               <h2 className="text-2xl font-bold text-white">
                 Manajemen Project
               </h2>
@@ -663,7 +671,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
             )}
 
             <div className="overflow-x-auto bg-slate-800 rounded-xl border border-slate-700">
-              <table className="w-full text-left">
+              <table className="w-full text-left min-w-[800px] md:min-w-full">
                 <thead className="bg-slate-900 text-slate-400 text-sm uppercase">
                   <tr>
                     <th className="p-4 font-medium">Project Name</th>
@@ -737,7 +745,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
       case "revenue":
         return (
           <div className="space-y-6">
-            <div className="flex justify-between items-center">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
               <h2 className="text-2xl font-bold text-white">
                 Manajemen Pendapatan
               </h2>
@@ -832,7 +840,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
             )}
 
             <div className="overflow-x-auto bg-slate-800 rounded-xl border border-slate-700">
-              <table className="w-full text-left">
+              <table className="w-full text-left min-w-[800px] md:min-w-full">
                 <thead className="bg-slate-900 text-slate-400 text-sm uppercase">
                   <tr>
                     <th className="p-4 font-medium">Tanggal</th>
@@ -898,7 +906,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
       case "reports":
         return (
           <div className="space-y-6">
-            <div className="flex justify-between items-center">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
               <h2 className="text-2xl font-bold text-white">
                 Laporan Keuangan & Project
               </h2>
@@ -993,7 +1001,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
       case "database":
         return (
           <div className="space-y-6">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
               <h2 className="text-2xl font-bold text-white">
                 Database Online (JSONBin)
               </h2>
@@ -1057,7 +1065,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                   <label className="block text-sm font-medium text-slate-300 mb-1">
                     Bin ID
                   </label>
-                  <div className="flex gap-2">
+                  <div className="flex flex-col sm:flex-row gap-2">
                     <input
                       placeholder="Contoh: 65a... (Atau klik 'Buat Baru')"
                       className="w-full bg-slate-900 border border-slate-600 p-3 rounded text-white focus:border-indigo-500 outline-none"
@@ -1132,47 +1140,90 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 flex text-slate-100">
-      {/* Sidebar */}
-      <aside className="w-64 bg-slate-900 border-r border-slate-800 flex flex-col fixed inset-y-0 left-0">
-        <div className="p-6 border-b border-slate-800 flex items-center gap-2">
-          <div className="bg-indigo-600 p-2 rounded-lg text-white">
+    <div className="min-h-screen bg-slate-950 flex flex-col md:flex-row text-slate-100 font-sans">
+      {/* Mobile Header */}
+      <div className="md:hidden bg-slate-900 border-b border-slate-800 p-4 flex items-center justify-between sticky top-0 z-30">
+        <div className="flex items-center gap-2">
+          <div className="bg-indigo-600 p-1.5 rounded-lg text-white">
             <Code2 className="w-5 h-5" />
           </div>
           <span className="font-bold text-lg">Uneed Admin</span>
         </div>
+        <button
+          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          className="text-slate-300 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition-colors"
+        >
+          {isMobileMenuOpen ? (
+            <X className="w-6 h-6" />
+          ) : (
+            <Menu className="w-6 h-6" />
+          )}
+        </button>
+      </div>
 
-        <nav className="flex-1 p-4 space-y-2">
+      {/* Sidebar & Overlay Wrapper */}
+      {/* Overlay */}
+      {isMobileMenuOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 md:hidden animate-in fade-in"
+          onClick={() => setIsMobileMenuOpen(false)}
+        />
+      )}
+
+      {/* Sidebar */}
+      <aside
+        className={`
+          fixed inset-y-0 left-0 z-50 w-64 bg-slate-900 border-r border-slate-800 flex flex-col transition-transform duration-300 ease-in-out md:translate-x-0
+          ${isMobileMenuOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full"}
+        `}
+      >
+        <div className="p-6 border-b border-slate-800 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="bg-indigo-600 p-2 rounded-lg text-white">
+              <Code2 className="w-5 h-5" />
+            </div>
+            <span className="font-bold text-lg">Uneed Admin</span>
+          </div>
+          {/* Close button for mobile inside sidebar */}
           <button
-            onClick={() => setActiveTab("overview")}
+            onClick={() => setIsMobileMenuOpen(false)}
+            className="md:hidden text-slate-400 hover:text-white"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
+          <button
+            onClick={() => handleNavClick("overview")}
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${activeTab === "overview" ? "bg-indigo-600 text-white" : "text-slate-400 hover:bg-slate-800 hover:text-white"}`}
           >
             <LayoutDashboard className="w-5 h-5" />
             <span>Overview</span>
           </button>
           <button
-            onClick={() => setActiveTab("projects")}
+            onClick={() => handleNavClick("projects")}
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${activeTab === "projects" ? "bg-indigo-600 text-white" : "text-slate-400 hover:bg-slate-800 hover:text-white"}`}
           >
             <FolderKanban className="w-5 h-5" />
             <span>Projects</span>
           </button>
           <button
-            onClick={() => setActiveTab("revenue")}
+            onClick={() => handleNavClick("revenue")}
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${activeTab === "revenue" ? "bg-indigo-600 text-white" : "text-slate-400 hover:bg-slate-800 hover:text-white"}`}
           >
             <DollarSign className="w-5 h-5" />
             <span>Pendapatan</span>
           </button>
           <button
-            onClick={() => setActiveTab("reports")}
+            onClick={() => handleNavClick("reports")}
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${activeTab === "reports" ? "bg-indigo-600 text-white" : "text-slate-400 hover:bg-slate-800 hover:text-white"}`}
           >
             <BarChart3 className="w-5 h-5" />
             <span>Laporan</span>
           </button>
           <button
-            onClick={() => setActiveTab("database")}
+            onClick={() => handleNavClick("database")}
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${activeTab === "database" ? "bg-indigo-600 text-white" : "text-slate-400 hover:bg-slate-800 hover:text-white"}`}
           >
             <Cloud
@@ -1194,7 +1245,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 ml-64 p-8 overflow-y-auto">
+      <main className="flex-1 md:ml-64 p-4 md:p-8 overflow-y-auto min-h-[calc(100vh-65px)] md:min-h-screen">
         {renderContent()}
       </main>
     </div>
