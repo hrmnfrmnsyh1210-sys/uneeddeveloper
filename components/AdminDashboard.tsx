@@ -9,6 +9,7 @@ import {
   Trash2,
   Code2,
   Pencil,
+  Download,
 } from "lucide-react";
 import { Button } from "./Button";
 import { AdminProject, Transaction } from "../types";
@@ -32,19 +33,29 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
     "overview" | "projects" | "revenue" | "reports"
   >("overview");
 
-  // Data State
+  // Data State with Safe Parsing
   const [projects, setProjects] = useState<AdminProject[]>(() => {
     if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("admin_projects");
-      return saved ? JSON.parse(saved) : [];
+      try {
+        const saved = localStorage.getItem("admin_projects");
+        return saved ? JSON.parse(saved) : [];
+      } catch (e) {
+        console.error("Error loading projects from storage:", e);
+        return [];
+      }
     }
     return [];
   });
 
   const [transactions, setTransactions] = useState<Transaction[]>(() => {
     if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("admin_transactions");
-      return saved ? JSON.parse(saved) : [];
+      try {
+        const saved = localStorage.getItem("admin_transactions");
+        return saved ? JSON.parse(saved) : [];
+      } catch (e) {
+        console.error("Error loading transactions from storage:", e);
+        return [];
+      }
     }
     return [];
   });
@@ -200,6 +211,28 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
       type: "Income",
       date: new Date().toISOString().split("T")[0],
     });
+  };
+
+  // --- HANDLER: EXPORT DATA ---
+  const handleExportData = () => {
+    const data = {
+      projects,
+      transactions,
+      exportedAt: new Date().toISOString(),
+      app: "Uneed Developer Admin",
+    };
+
+    const jsonString = JSON.stringify(data, null, 2);
+    const blob = new Blob([jsonString], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `uneed-backup-${new Date().toISOString().split("T")[0]}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   };
 
   // Report Data Gen
@@ -649,9 +682,18 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
       case "reports":
         return (
           <div className="space-y-6">
-            <h2 className="text-2xl font-bold text-white">
-              Laporan Keuangan & Project
-            </h2>
+            <div className="flex justify-between items-center">
+              <h2 className="text-2xl font-bold text-white">
+                Laporan Keuangan & Project
+              </h2>
+              <Button
+                onClick={handleExportData}
+                variant="outline"
+                leftIcon={<Download className="w-4 h-4" />}
+              >
+                Backup Database (JSON)
+              </Button>
+            </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <div className="bg-slate-800 p-6 rounded-2xl border border-slate-700">
