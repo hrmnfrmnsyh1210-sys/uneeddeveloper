@@ -7,9 +7,7 @@ import {
   LogOut,
   Plus,
   Trash2,
-  Search,
   Code2,
-  Calendar,
 } from "lucide-react";
 import { Button } from "./Button";
 import { AdminProject, Transaction } from "../types";
@@ -28,83 +26,26 @@ interface AdminDashboardProps {
   onLogout: () => void;
 }
 
-// Initial Mock Data
-const INITIAL_PROJECTS: AdminProject[] = [
-  {
-    id: "1",
-    name: "E-Commerce App",
-    client: "PT Retail Indo",
-    value: 25000000,
-    status: "In Progress",
-    deadline: "2024-06-30",
-  },
-  {
-    id: "2",
-    name: "Company Profile",
-    client: "CV Maju Jaya",
-    value: 5000000,
-    status: "Completed",
-    deadline: "2024-03-15",
-  },
-  {
-    id: "3",
-    name: "HRIS System",
-    client: "Corp Tech",
-    value: 45000000,
-    status: "Pending",
-    deadline: "2024-08-01",
-  },
-];
-
-const INITIAL_TRANSACTIONS: Transaction[] = [
-  {
-    id: "1",
-    date: "2024-03-01",
-    description: "DP Company Profile",
-    amount: 2500000,
-    projectId: "2",
-    type: "Income",
-  },
-  {
-    id: "2",
-    date: "2024-03-15",
-    description: "Pelunasan Company Profile",
-    amount: 2500000,
-    projectId: "2",
-    type: "Income",
-  },
-  {
-    id: "3",
-    date: "2024-04-10",
-    description: "DP E-Commerce",
-    amount: 10000000,
-    projectId: "1",
-    type: "Income",
-  },
-  {
-    id: "4",
-    date: "2024-04-12",
-    description: "Server Cost AWS",
-    amount: 1500000,
-    projectId: "1",
-    type: "Expense",
-  },
-];
-
 export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
   const [activeTab, setActiveTab] = useState<
     "overview" | "projects" | "revenue" | "reports"
   >("overview");
 
-  // Data State with simple localStorage persistence
+  // Data State: Initialize from LocalStorage or Empty Array (No Dummy Data)
   const [projects, setProjects] = useState<AdminProject[]>(() => {
-    const saved = localStorage.getItem("admin_projects");
-    return saved ? JSON.parse(saved) : INITIAL_PROJECTS;
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("admin_projects");
+      return saved ? JSON.parse(saved) : [];
+    }
+    return [];
   });
 
   const [transactions, setTransactions] = useState<Transaction[]>(() => {
-    const saved = localStorage.getItem("admin_transactions");
-    return saved ? JSON.parse(saved) : INITIAL_TRANSACTIONS;
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("admin_transactions");
+      return saved ? JSON.parse(saved) : [];
+    }
+    return [];
   });
 
   // Persist data when changed
@@ -155,15 +96,18 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
         status: newProject.status as any,
         deadline: newProject.deadline || "",
       };
-      setProjects([...projects, project]);
+      setProjects((prev) => [...prev, project]);
       setShowAddProject(false);
       setNewProject({ status: "Pending" });
+    } else {
+      alert("Mohon lengkapi nama project, klien, dan nilai project.");
     }
   };
 
   const handleDeleteProject = (id: string) => {
-    if (confirm("Yakin ingin menghapus project ini?")) {
-      setProjects(projects.filter((p) => p.id !== id));
+    if (confirm("Yakin ingin menghapus project ini secara permanen?")) {
+      setProjects((prev) => prev.filter((p) => p.id !== id));
+      // Optional: Delete associated transactions or keep them as orphan records
     }
   };
 
@@ -177,36 +121,52 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
         projectId: newTrans.projectId || "",
         type: newTrans.type as any,
       };
-      setTransactions([...transactions, trans]);
+      setTransactions((prev) => [...prev, trans]);
       setShowAddTrans(false);
       setNewTrans({
         type: "Income",
         date: new Date().toISOString().split("T")[0],
       });
+    } else {
+      alert("Mohon lengkapi deskripsi dan jumlah transaksi.");
     }
   };
 
   const handleDeleteTrans = (id: string) => {
-    if (confirm("Hapus transaksi ini?")) {
-      setTransactions(transactions.filter((t) => t.id !== id));
+    if (confirm("Hapus transaksi ini? Data akan hilang permanen.")) {
+      setTransactions((prev) => prev.filter((t) => t.id !== id));
     }
   };
 
   // Report Data Gen
   const getMonthlyRevenue = () => {
     const monthlyData: { [key: string]: number } = {};
-    transactions
+
+    // Sort transactions by date first
+    const sortedTrans = [...transactions].sort(
+      (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
+    );
+
+    sortedTrans
       .filter((t) => t.type === "Income")
       .forEach((t) => {
-        const month = new Date(t.date).toLocaleString("id-ID", {
+        const date = new Date(t.date);
+        // Format: "Jan 24"
+        const monthYear = date.toLocaleString("id-ID", {
           month: "short",
+          year: "2-digit",
         });
-        monthlyData[month] = (monthlyData[month] || 0) + t.amount;
+        monthlyData[monthYear] = (monthlyData[monthYear] || 0) + t.amount;
       });
-    return Object.entries(monthlyData).map(([name, value]) => ({
+
+    const data = Object.entries(monthlyData).map(([name, value]) => ({
       name,
       value,
     }));
+
+    // Return empty placeholder if no data so chart doesn't break
+    if (data.length === 0) return [{ name: "No Data", value: 0 }];
+    return data;
   };
 
   const renderContent = () => {
@@ -264,37 +224,45 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
               <h3 className="text-lg font-bold text-white mb-6">
                 Pendapatan Bulanan
               </h3>
-              <div className="h-64 w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={getMonthlyRevenue()}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-                    <XAxis dataKey="name" stroke="#94a3b8" />
-                    <YAxis
-                      stroke="#94a3b8"
-                      tickFormatter={(value) => `Rp${value / 1000000}jt`}
-                    />
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: "#1e293b",
-                        borderColor: "#334155",
-                        color: "#fff",
-                      }}
-                      formatter={(value: number) => [
-                        `Rp ${value.toLocaleString("id-ID")}`,
-                        "Pendapatan",
-                      ]}
-                    />
-                    <Bar dataKey="value" fill="#6366f1" radius={[4, 4, 0, 0]}>
-                      {getMonthlyRevenue().map((entry, index) => (
-                        <Cell
-                          key={`cell-${index}`}
-                          fill={index % 2 === 0 ? "#6366f1" : "#818cf8"}
-                        />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
+              {transactions.length > 0 ? (
+                <div className="h-64 w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={getMonthlyRevenue()}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                      <XAxis dataKey="name" stroke="#94a3b8" fontSize={12} />
+                      <YAxis
+                        stroke="#94a3b8"
+                        tickFormatter={(value) => `${value / 1000}k`}
+                        fontSize={12}
+                      />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: "#1e293b",
+                          borderColor: "#334155",
+                          color: "#fff",
+                        }}
+                        formatter={(value: number) => [
+                          `Rp ${value.toLocaleString("id-ID")}`,
+                          "Pendapatan",
+                        ]}
+                      />
+                      <Bar dataKey="value" fill="#6366f1" radius={[4, 4, 0, 0]}>
+                        {getMonthlyRevenue().map((entry, index) => (
+                          <Cell
+                            key={`cell-${index}`}
+                            fill={index % 2 === 0 ? "#6366f1" : "#818cf8"}
+                          />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              ) : (
+                <div className="h-64 flex flex-col items-center justify-center text-slate-500 border-2 border-dashed border-slate-700 rounded-xl">
+                  <BarChart3 className="w-12 h-12 mb-2 opacity-50" />
+                  <p>Belum ada data transaksi</p>
+                </div>
+              )}
             </div>
           </div>
         );
@@ -322,7 +290,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                   <input
                     placeholder="Nama Project"
-                    className="bg-slate-900 border border-slate-600 p-2 rounded text-white"
+                    className="bg-slate-900 border border-slate-600 p-2 rounded text-white focus:border-indigo-500 outline-none"
                     value={newProject.name || ""}
                     onChange={(e) =>
                       setNewProject({ ...newProject, name: e.target.value })
@@ -330,7 +298,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                   />
                   <input
                     placeholder="Klien"
-                    className="bg-slate-900 border border-slate-600 p-2 rounded text-white"
+                    className="bg-slate-900 border border-slate-600 p-2 rounded text-white focus:border-indigo-500 outline-none"
                     value={newProject.client || ""}
                     onChange={(e) =>
                       setNewProject({ ...newProject, client: e.target.value })
@@ -339,7 +307,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                   <input
                     type="number"
                     placeholder="Nilai (Rp)"
-                    className="bg-slate-900 border border-slate-600 p-2 rounded text-white"
+                    className="bg-slate-900 border border-slate-600 p-2 rounded text-white focus:border-indigo-500 outline-none"
                     value={newProject.value || ""}
                     onChange={(e) =>
                       setNewProject({
@@ -350,14 +318,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                   />
                   <input
                     type="date"
-                    className="bg-slate-900 border border-slate-600 p-2 rounded text-white"
+                    className="bg-slate-900 border border-slate-600 p-2 rounded text-white focus:border-indigo-500 outline-none"
                     value={newProject.deadline || ""}
                     onChange={(e) =>
                       setNewProject({ ...newProject, deadline: e.target.value })
                     }
                   />
                   <select
-                    className="bg-slate-900 border border-slate-600 p-2 rounded text-white"
+                    className="bg-slate-900 border border-slate-600 p-2 rounded text-white focus:border-indigo-500 outline-none"
                     value={newProject.status}
                     onChange={(e) =>
                       setNewProject({
@@ -396,40 +364,52 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-700">
-                  {projects.map((p) => (
-                    <tr
-                      key={p.id}
-                      className="text-slate-300 hover:bg-slate-700/50"
-                    >
-                      <td className="p-4">{p.name}</td>
-                      <td className="p-4">{p.client}</td>
-                      <td className="p-4">
-                        Rp {p.value.toLocaleString("id-ID")}
-                      </td>
-                      <td className="p-4">
-                        <span
-                          className={`px-2 py-1 rounded text-xs font-medium 
-                          ${
-                            p.status === "Completed"
-                              ? "bg-green-500/20 text-green-400"
-                              : p.status === "In Progress"
-                                ? "bg-indigo-500/20 text-indigo-400"
-                                : "bg-slate-500/20 text-slate-400"
-                          }`}
-                        >
-                          {p.status}
-                        </span>
-                      </td>
-                      <td className="p-4 text-right">
-                        <button
-                          onClick={() => handleDeleteProject(p.id)}
-                          className="text-red-400 hover:text-red-300"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                  {projects.length === 0 ? (
+                    <tr>
+                      <td
+                        colSpan={5}
+                        className="p-8 text-center text-slate-500"
+                      >
+                        Belum ada data project. Klik "Project Baru" untuk
+                        menambahkan.
                       </td>
                     </tr>
-                  ))}
+                  ) : (
+                    projects.map((p) => (
+                      <tr
+                        key={p.id}
+                        className="text-slate-300 hover:bg-slate-700/50"
+                      >
+                        <td className="p-4">{p.name}</td>
+                        <td className="p-4">{p.client}</td>
+                        <td className="p-4">
+                          Rp {p.value.toLocaleString("id-ID")}
+                        </td>
+                        <td className="p-4">
+                          <span
+                            className={`px-2 py-1 rounded text-xs font-medium 
+                            ${
+                              p.status === "Completed"
+                                ? "bg-green-500/20 text-green-400"
+                                : p.status === "In Progress"
+                                  ? "bg-indigo-500/20 text-indigo-400"
+                                  : "bg-slate-500/20 text-slate-400"
+                            }`}
+                          >
+                            {p.status}
+                          </span>
+                        </td>
+                        <td className="p-4 text-right">
+                          <button
+                            onClick={() => handleDeleteProject(p.id)}
+                            className="text-red-400 hover:text-red-300 transition-colors p-2 hover:bg-slate-700 rounded-lg"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>
@@ -460,7 +440,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                   <input
                     type="date"
-                    className="bg-slate-900 border border-slate-600 p-2 rounded text-white"
+                    className="bg-slate-900 border border-slate-600 p-2 rounded text-white focus:border-indigo-500 outline-none"
                     value={newTrans.date}
                     onChange={(e) =>
                       setNewTrans({ ...newTrans, date: e.target.value })
@@ -468,7 +448,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                   />
                   <input
                     placeholder="Deskripsi"
-                    className="bg-slate-900 border border-slate-600 p-2 rounded text-white"
+                    className="bg-slate-900 border border-slate-600 p-2 rounded text-white focus:border-indigo-500 outline-none"
                     value={newTrans.description || ""}
                     onChange={(e) =>
                       setNewTrans({ ...newTrans, description: e.target.value })
@@ -477,7 +457,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                   <input
                     type="number"
                     placeholder="Jumlah (Rp)"
-                    className="bg-slate-900 border border-slate-600 p-2 rounded text-white"
+                    className="bg-slate-900 border border-slate-600 p-2 rounded text-white focus:border-indigo-500 outline-none"
                     value={newTrans.amount || ""}
                     onChange={(e) =>
                       setNewTrans({
@@ -487,7 +467,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                     }
                   />
                   <select
-                    className="bg-slate-900 border border-slate-600 p-2 rounded text-white"
+                    className="bg-slate-900 border border-slate-600 p-2 rounded text-white focus:border-indigo-500 outline-none"
                     value={newTrans.type}
                     onChange={(e) =>
                       setNewTrans({ ...newTrans, type: e.target.value as any })
@@ -497,7 +477,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                     <option value="Expense">Pengeluaran (-)</option>
                   </select>
                   <select
-                    className="bg-slate-900 border border-slate-600 p-2 rounded text-white"
+                    className="bg-slate-900 border border-slate-600 p-2 rounded text-white focus:border-indigo-500 outline-none"
                     value={newTrans.projectId}
                     onChange={(e) =>
                       setNewTrans({ ...newTrans, projectId: e.target.value })
@@ -540,33 +520,44 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-700">
-                  {transactions.map((t) => (
-                    <tr
-                      key={t.id}
-                      className="text-slate-300 hover:bg-slate-700/50"
-                    >
-                      <td className="p-4 text-sm">{t.date}</td>
-                      <td className="p-4">{t.description}</td>
-                      <td className="p-4 text-sm text-slate-500">
-                        {projects.find((p) => p.id === t.projectId)?.name ||
-                          "-"}
-                      </td>
+                  {transactions.length === 0 ? (
+                    <tr>
                       <td
-                        className={`p-4 text-right font-medium ${t.type === "Income" ? "text-green-400" : "text-red-400"}`}
+                        colSpan={5}
+                        className="p-8 text-center text-slate-500"
                       >
-                        {t.type === "Income" ? "+" : "-"} Rp{" "}
-                        {t.amount.toLocaleString("id-ID")}
-                      </td>
-                      <td className="p-4 text-right">
-                        <button
-                          onClick={() => handleDeleteTrans(t.id)}
-                          className="text-red-400 hover:text-red-300"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        Belum ada data transaksi.
                       </td>
                     </tr>
-                  ))}
+                  ) : (
+                    transactions.map((t) => (
+                      <tr
+                        key={t.id}
+                        className="text-slate-300 hover:bg-slate-700/50"
+                      >
+                        <td className="p-4 text-sm">{t.date}</td>
+                        <td className="p-4">{t.description}</td>
+                        <td className="p-4 text-sm text-slate-500">
+                          {projects.find((p) => p.id === t.projectId)?.name ||
+                            "-"}
+                        </td>
+                        <td
+                          className={`p-4 text-right font-medium ${t.type === "Income" ? "text-green-400" : "text-red-400"}`}
+                        >
+                          {t.type === "Income" ? "+" : "-"} Rp{" "}
+                          {t.amount.toLocaleString("id-ID")}
+                        </td>
+                        <td className="p-4 text-right">
+                          <button
+                            onClick={() => handleDeleteTrans(t.id)}
+                            className="text-red-400 hover:text-red-300 transition-colors p-2 hover:bg-slate-700 rounded-lg"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>
@@ -586,23 +577,32 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                   Tren Pemasukan
                 </h3>
                 <div className="h-64 w-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={getMonthlyRevenue()}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-                      <XAxis dataKey="name" stroke="#94a3b8" />
-                      <YAxis stroke="#94a3b8" />
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: "#1e293b",
-                          borderColor: "#334155",
-                        }}
-                        formatter={(value: number) =>
-                          `Rp ${value.toLocaleString()}`
-                        }
-                      />
-                      <Bar dataKey="value" fill="#10b981" />
-                    </BarChart>
-                  </ResponsiveContainer>
+                  {transactions.length > 0 ? (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={getMonthlyRevenue()}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                        <XAxis dataKey="name" stroke="#94a3b8" />
+                        <YAxis
+                          stroke="#94a3b8"
+                          tickFormatter={(v) => `${v / 1000}k`}
+                        />
+                        <Tooltip
+                          contentStyle={{
+                            backgroundColor: "#1e293b",
+                            borderColor: "#334155",
+                          }}
+                          formatter={(value: number) =>
+                            `Rp ${value.toLocaleString()}`
+                          }
+                        />
+                        <Bar dataKey="value" fill="#10b981" />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className="h-full flex items-center justify-center text-slate-500">
+                      Belum ada data grafik
+                    </div>
+                  )}
                 </div>
               </div>
 
