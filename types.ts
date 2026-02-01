@@ -1,5 +1,7 @@
 import React from "react";
 
+// ===== Landing Page Types =====
+
 export interface ServiceItem {
   id: string;
   title: string;
@@ -30,18 +32,22 @@ export interface ChatMessage {
   timestamp: Date;
 }
 
-// Admin Types
+// ===== Admin Types =====
+
 export interface AdminUser {
   email: string;
   name: string;
 }
+
+export type ProjectStatus = "Pending" | "In Progress" | "Completed" | "Cancelled";
+export type TransactionType = "Income" | "Expense";
 
 export interface AdminProject {
   id: string;
   name: string;
   client: string;
   value: number;
-  status: "Pending" | "In Progress" | "Completed" | "Cancelled";
+  status: ProjectStatus;
   deadline: string;
 }
 
@@ -50,6 +56,19 @@ export interface Transaction {
   date: string;
   description: string;
   amount: number;
-  projectId: string; // Links to AdminProject
-  type: "Income" | "Expense";
+  projectId: string;
+  type: TransactionType;
 }
+
+// ===== Sync Types =====
+
+export type SyncStatus = "idle" | "success" | "error";
+
+export interface JsonBinConfig {
+  binId: string;
+  apiKey: string;
+}
+
+// ===== Navigation Types =====
+
+export type PageName = "home" | "login" | "admin";

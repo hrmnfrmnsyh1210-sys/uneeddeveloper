@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from "react";
 import { Menu, X, Code2, LogIn } from "lucide-react";
 import { Button } from "./Button";
+import { NAV_LINKS, SCROLL_THRESHOLD, NAV_SCROLL_DELAY } from "../constants";
+import { PageName } from "../types";
 
 interface HeaderProps {
-  onNavigate?: (page: "home" | "login") => void;
+  onNavigate?: (page: PageName) => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({ onNavigate }) => {
@@ -11,27 +13,22 @@ export const Header: React.FC<HeaderProps> = ({ onNavigate }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   useEffect(() => {
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 50);
-    };
+    const handleScroll = () => setIsScrolled(window.scrollY > SCROLL_THRESHOLD);
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  const navLinks = [
-    { name: "Layanan", href: "#services" },
-    { name: "Kontak", href: "#contact" },
-  ];
-
   const handleNavClick = (href: string) => {
-    if (onNavigate) onNavigate("home");
+    onNavigate?.("home");
     setIsMobileMenuOpen(false);
-
-    // Slight delay to allow view change if needed
     setTimeout(() => {
-      const element = document.querySelector(href);
-      element?.scrollIntoView({ behavior: "smooth" });
-    }, 100);
+      document.querySelector(href)?.scrollIntoView({ behavior: "smooth" });
+    }, NAV_SCROLL_DELAY);
+  };
+
+  const handleLoginClick = () => {
+    setIsMobileMenuOpen(false);
+    onNavigate?.("login");
   };
 
   return (
@@ -61,7 +58,7 @@ export const Header: React.FC<HeaderProps> = ({ onNavigate }) => {
 
         {/* Desktop Nav */}
         <nav className="hidden md:flex items-center gap-8">
-          {navLinks.map((link) => (
+          {NAV_LINKS.map((link) => (
             <a
               key={link.name}
               href={link.href}
@@ -74,7 +71,6 @@ export const Header: React.FC<HeaderProps> = ({ onNavigate }) => {
               {link.name}
             </a>
           ))}
-
           <Button
             variant="primary"
             className="!py-2 !px-4 !text-sm !rounded-lg"
@@ -85,7 +81,7 @@ export const Header: React.FC<HeaderProps> = ({ onNavigate }) => {
           <Button
             variant="ghost"
             className="!py-2 !px-4 !text-sm text-slate-300"
-            onClick={() => onNavigate && onNavigate("login")}
+            onClick={handleLoginClick}
             leftIcon={<LogIn className="w-4 h-4" />}
           >
             Login
@@ -97,18 +93,14 @@ export const Header: React.FC<HeaderProps> = ({ onNavigate }) => {
           className="md:hidden text-white"
           onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
         >
-          {isMobileMenuOpen ? (
-            <X className="w-6 h-6" />
-          ) : (
-            <Menu className="w-6 h-6" />
-          )}
+          {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
         </button>
       </div>
 
       {/* Mobile Menu */}
       {isMobileMenuOpen && (
         <div className="absolute top-full left-0 right-0 bg-slate-900 border-b border-slate-800 p-6 md:hidden flex flex-col gap-4 shadow-2xl">
-          {navLinks.map((link) => (
+          {NAV_LINKS.map((link) => (
             <a
               key={link.name}
               href={link.href}
@@ -121,7 +113,6 @@ export const Header: React.FC<HeaderProps> = ({ onNavigate }) => {
               {link.name}
             </a>
           ))}
-
           <Button
             variant="primary"
             className="w-full mt-4"
@@ -132,10 +123,7 @@ export const Header: React.FC<HeaderProps> = ({ onNavigate }) => {
           <Button
             variant="ghost"
             className="w-full justify-start text-slate-300"
-            onClick={() => {
-              setIsMobileMenuOpen(false);
-              onNavigate && onNavigate("login");
-            }}
+            onClick={handleLoginClick}
             leftIcon={<LogIn className="w-4 h-4" />}
           >
             Login Admin

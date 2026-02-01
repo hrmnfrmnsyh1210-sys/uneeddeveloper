@@ -5,36 +5,31 @@ import { Services } from "./components/Services";
 import { Contact } from "./components/Contact";
 import { Footer } from "./components/Footer";
 import { Login } from "./components/Login";
-import { AdminDashboard } from "./components/AdminDashboard";
+import { AdminDashboard } from "./components/admin/AdminDashboard";
+import { STORAGE_KEYS } from "./constants";
+import { PageName } from "./types";
 
 const App: React.FC = () => {
-  const [currentPage, setCurrentPage] = useState<"home" | "login" | "admin">(
-    "home",
-  );
+  const [currentPage, setCurrentPage] = useState<PageName>("home");
 
   useEffect(() => {
-    // Check if user is already logged in
-    const isAuth = localStorage.getItem("isAuthenticated");
+    const isAuth = localStorage.getItem(STORAGE_KEYS.IS_AUTHENTICATED);
     if (isAuth === "true") {
       setCurrentPage("admin");
     }
   }, []);
 
-  const handleLoginSuccess = () => {
-    setCurrentPage("admin");
-  };
+  const handleLoginSuccess = () => setCurrentPage("admin");
 
   const handleLogout = () => {
-    localStorage.removeItem("isAuthenticated");
+    localStorage.removeItem(STORAGE_KEYS.IS_AUTHENTICATED);
     setCurrentPage("home");
   };
 
-  // Render Admin Dashboard
   if (currentPage === "admin") {
     return <AdminDashboard onLogout={handleLogout} />;
   }
 
-  // Render Login Page
   if (currentPage === "login") {
     return (
       <Login
@@ -44,7 +39,6 @@ const App: React.FC = () => {
     );
   }
 
-  // Render Landing Page
   return (
     <div className="min-h-screen bg-slate-950 text-slate-50 font-sans selection:bg-indigo-500 selection:text-white">
       <Header onNavigate={setCurrentPage} />

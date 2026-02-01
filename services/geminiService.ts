@@ -18,18 +18,25 @@ Tugas anda:
 Jaga jawaban tetap ringkas (maksimal 3 paragraf pendek) agar mudah dibaca di chat widget.
 `;
 
+const GEMINI_MODEL = "gemini-3-flash-preview";
+
 let chatSession: Chat | null = null;
 
-export const initializeChat = async (): Promise<Chat> => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-  
+const initializeChat = async (): Promise<Chat> => {
+  const apiKey = process.env.API_KEY;
+  if (!apiKey) {
+    throw new Error("API_KEY environment variable is not set");
+  }
+
+  const ai = new GoogleGenAI({ apiKey });
+
   chatSession = ai.chats.create({
-    model: 'gemini-3-flash-preview',
+    model: GEMINI_MODEL,
     config: {
       systemInstruction: SYSTEM_INSTRUCTION,
     },
   });
-  
+
   return chatSession;
 };
 
@@ -39,7 +46,7 @@ export const sendMessageToGemini = async (message: string): Promise<string> => {
   }
 
   if (!chatSession) {
-     throw new Error("Failed to initialize chat session");
+    throw new Error("Failed to initialize chat session");
   }
 
   try {

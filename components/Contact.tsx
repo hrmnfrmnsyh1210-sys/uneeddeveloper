@@ -1,38 +1,29 @@
 import React, { useState } from "react";
 import { Button } from "./Button";
 import { Mail, Phone, MapPin, Send, Instagram } from "lucide-react";
+import { ContactCard } from "./ui/ContactCard";
 import { ContactFormState } from "../types";
+import { CONTACT, DEFAULT_CONTACT_FORM, SERVICE_OPTIONS } from "../constants";
+import { buildWhatsAppURL } from "../utils/helpers";
 
 export const Contact: React.FC = () => {
-  const [formState, setFormState] = useState<ContactFormState>({
-    name: "",
-    email: "",
-    service: "web",
-    message: "",
-  });
+  const [formState, setFormState] = useState<ContactFormState>({ ...DEFAULT_CONTACT_FORM });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
 
-    // Construct WhatsApp Message
-    const phoneNumber = "6285705041136";
     const text = `Halo Uneed Developer, perkenalkan saya ${formState.name}.\n\nSaya tertarik dengan layanan: ${formState.service.toUpperCase()}.\n\nDetail Project: ${formState.message}\n\nEmail saya: ${formState.email}`;
-    const encodedText = encodeURIComponent(text);
-    const waUrl = `https://wa.me/${phoneNumber}?text=${encodedText}`;
-
-    // Open WhatsApp
+    const waUrl = buildWhatsAppURL(text);
     window.open(waUrl, "_blank");
 
     setIsSubmitting(false);
-    setFormState({ name: "", email: "", service: "web", message: "" });
+    setFormState({ ...DEFAULT_CONTACT_FORM });
   };
 
   const handleChange = (
-    e: React.ChangeEvent<
-      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
-    >,
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) => {
     setFormState((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
@@ -50,70 +41,41 @@ export const Contact: React.FC = () => {
               Mulai Proyek Anda Hari Ini
             </h3>
             <p className="text-slate-400 text-lg mb-10 leading-relaxed">
-              Siap mentransformasi bisnis Anda dengan teknologi? Hubungi kami
-              via WhatsApp atau DM Instagram untuk respon cepat.
+              Siap mentransformasi bisnis Anda dengan teknologi? Hubungi kami via
+              WhatsApp atau DM Instagram untuk respon cepat.
             </p>
 
             <div className="space-y-6">
-              <a
-                href="https://wa.me/6285705041136"
-                target="_blank"
-                rel="noreferrer"
-                className="flex items-start group"
-              >
-                <div className="w-12 h-12 bg-slate-800 rounded-lg flex items-center justify-center text-indigo-400 group-hover:bg-indigo-600 group-hover:text-white transition-colors flex-shrink-0 mr-4">
-                  <Phone className="w-6 h-6" />
-                </div>
-                <div>
-                  <h4 className="text-white font-semibold mb-1 group-hover:text-indigo-400 transition-colors">
-                    WhatsApp
-                  </h4>
-                  <p className="text-slate-400">0857-0504-1136</p>
-                </div>
-              </a>
-
-              <a
-                href="https://www.instagram.com/uneeddeveloper/"
-                target="_blank"
-                rel="noreferrer"
-                className="flex items-start group"
-              >
-                <div className="w-12 h-12 bg-slate-800 rounded-lg flex items-center justify-center text-indigo-400 group-hover:bg-pink-600 group-hover:text-white transition-colors flex-shrink-0 mr-4">
-                  <Instagram className="w-6 h-6" />
-                </div>
-                <div>
-                  <h4 className="text-white font-semibold mb-1 group-hover:text-pink-400 transition-colors">
-                    Instagram
-                  </h4>
-                  <p className="text-slate-400">@uneeddeveloper</p>
-                </div>
-              </a>
-
-              <div className="flex items-start">
-                <div className="w-12 h-12 bg-slate-800 rounded-lg flex items-center justify-center text-indigo-400 flex-shrink-0 mr-4">
-                  <Mail className="w-6 h-6" />
-                </div>
-                <div>
-                  <h4 className="text-white font-semibold mb-1">Email Kami</h4>
-                  <p className="text-slate-400">uneeddeveloper2025@gmail.com</p>
-                </div>
-              </div>
-
-              <div className="flex items-start">
-                <div className="w-12 h-12 bg-slate-800 rounded-lg flex items-center justify-center text-indigo-400 flex-shrink-0 mr-4">
-                  <MapPin className="w-6 h-6" />
-                </div>
-                <div>
-                  <h4 className="text-white font-semibold mb-1">
-                    Kantor Studio
-                  </h4>
-                  <p className="text-slate-400">
-                    Purnajaya 1 Jalur II No.28
+              <ContactCard
+                icon={<Phone className="w-6 h-6" />}
+                title="WhatsApp"
+                description={CONTACT.PHONE_DISPLAY}
+                href={CONTACT.WHATSAPP_URL}
+                hoverColor="indigo"
+              />
+              <ContactCard
+                icon={<Instagram className="w-6 h-6" />}
+                title="Instagram"
+                description={CONTACT.INSTAGRAM_HANDLE}
+                href={CONTACT.INSTAGRAM_URL}
+                hoverColor="pink"
+              />
+              <ContactCard
+                icon={<Mail className="w-6 h-6" />}
+                title="Email Kami"
+                description={CONTACT.EMAIL}
+              />
+              <ContactCard
+                icon={<MapPin className="w-6 h-6" />}
+                title="Kantor Studio"
+                description={
+                  <p>
+                    {CONTACT.ADDRESS}
                     <br />
-                    Pontianak Utara, Kota Pontianak, Kalimantan Barat, Indonesia
+                    {CONTACT.ADDRESS_CITY}
                   </p>
-                </div>
-              </div>
+                }
+              />
             </div>
           </div>
 
@@ -124,17 +86,13 @@ export const Contact: React.FC = () => {
                 Kirim Pesan Langsung
               </h4>
               <p className="text-slate-400 text-sm">
-                Form ini akan membuka WhatsApp Anda dengan pesan yang sudah
-                terisi.
+                Form ini akan membuka WhatsApp Anda dengan pesan yang sudah terisi.
               </p>
             </div>
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <label
-                    htmlFor="name"
-                    className="block text-sm font-medium text-slate-300 mb-2"
-                  >
+                  <label htmlFor="name" className="block text-sm font-medium text-slate-300 mb-2">
                     Nama Lengkap
                   </label>
                   <input
@@ -149,10 +107,7 @@ export const Contact: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label
-                    htmlFor="email"
-                    className="block text-sm font-medium text-slate-300 mb-2"
-                  >
+                  <label htmlFor="email" className="block text-sm font-medium text-slate-300 mb-2">
                     Email
                   </label>
                   <input
@@ -169,10 +124,7 @@ export const Contact: React.FC = () => {
               </div>
 
               <div>
-                <label
-                  htmlFor="service"
-                  className="block text-sm font-medium text-slate-300 mb-2"
-                >
+                <label htmlFor="service" className="block text-sm font-medium text-slate-300 mb-2">
                   Layanan yang Dibutuhkan
                 </label>
                 <select
@@ -182,18 +134,16 @@ export const Contact: React.FC = () => {
                   onChange={handleChange}
                   className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all appearance-none"
                 >
-                  <option value="web">Web Application</option>
-                  <option value="mobile">Mobile Application</option>
-                  <option value="report">Pelaporan & Data</option>
-                  <option value="custom">Sistem Custom</option>
+                  {SERVICE_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
                 </select>
               </div>
 
               <div>
-                <label
-                  htmlFor="message"
-                  className="block text-sm font-medium text-slate-300 mb-2"
-                >
+                <label htmlFor="message" className="block text-sm font-medium text-slate-300 mb-2">
                   Detail Proyek
                 </label>
                 <textarea

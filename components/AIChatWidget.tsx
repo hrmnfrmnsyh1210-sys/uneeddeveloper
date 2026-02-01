@@ -1,33 +1,34 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { MessageSquare, X, Send, Bot, User, Sparkles } from 'lucide-react';
-import { sendMessageToGemini } from '../services/geminiService';
-import { ChatMessage } from '../types';
+import React, { useState, useRef, useEffect } from "react";
+import { MessageSquare, X, Send, Bot } from "lucide-react";
+import { sendMessageToGemini } from "../services/geminiService";
+import { ChatMessage } from "../types";
+import { CHAT_WELCOME_MESSAGE } from "../constants";
+import { generateId } from "../utils/helpers";
 
 export const AIChatWidget: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [inputText, setInputText] = useState('');
+  const [inputText, setInputText] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
   useEffect(() => {
     scrollToBottom();
   }, [messages, isOpen]);
 
-  // Initial greeting
   useEffect(() => {
     if (messages.length === 0 && isOpen) {
       setMessages([
         {
-          id: 'welcome',
-          role: 'model',
-          text: 'Halo! 👋 Saya Uneed AI Assistant. Ada yang bisa saya bantu terkait pembuatan website, aplikasi mobile, atau sistem laporan bisnis Anda hari ini?',
-          timestamp: new Date()
-        }
+          id: "welcome",
+          role: "model",
+          text: CHAT_WELCOME_MESSAGE,
+          timestamp: new Date(),
+        },
       ]);
     }
   }, [isOpen]);
@@ -36,25 +37,25 @@ export const AIChatWidget: React.FC = () => {
     if (!inputText.trim()) return;
 
     const userMsg: ChatMessage = {
-      id: Date.now().toString(),
-      role: 'user',
+      id: generateId(),
+      role: "user",
       text: inputText,
-      timestamp: new Date()
+      timestamp: new Date(),
     };
 
-    setMessages(prev => [...prev, userMsg]);
-    setInputText('');
+    setMessages((prev) => [...prev, userMsg]);
+    setInputText("");
     setIsLoading(true);
 
     try {
       const responseText = await sendMessageToGemini(inputText);
       const aiMsg: ChatMessage = {
-        id: (Date.now() + 1).toString(),
-        role: 'model',
+        id: generateId(),
+        role: "model",
         text: responseText,
-        timestamp: new Date()
+        timestamp: new Date(),
       };
-      setMessages(prev => [...prev, aiMsg]);
+      setMessages((prev) => [...prev, aiMsg]);
     } catch (error) {
       console.error(error);
     } finally {
@@ -63,7 +64,7 @@ export const AIChatWidget: React.FC = () => {
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSend();
     }
@@ -72,9 +73,11 @@ export const AIChatWidget: React.FC = () => {
   return (
     <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end pointer-events-none">
       {/* Chat Window */}
-      <div 
+      <div
         className={`pointer-events-auto bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl w-[90vw] sm:w-[400px] mb-4 transition-all duration-300 origin-bottom-right overflow-hidden flex flex-col ${
-          isOpen ? 'opacity-100 scale-100 translate-y-0 h-[500px]' : 'opacity-0 scale-95 translate-y-10 h-0'
+          isOpen
+            ? "opacity-100 scale-100 translate-y-0 h-[500px]"
+            : "opacity-0 scale-95 translate-y-10 h-0"
         }`}
       >
         {/* Header */}
@@ -84,11 +87,18 @@ export const AIChatWidget: React.FC = () => {
               <Bot className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h3 className="font-bold text-white text-sm">Uneed AI Consultant</h3>
-              <p className="text-indigo-200 text-xs">Online • Powered by Gemini</p>
+              <h3 className="font-bold text-white text-sm">
+                Uneed AI Consultant
+              </h3>
+              <p className="text-indigo-200 text-xs">
+                Online • Powered by Gemini
+              </p>
             </div>
           </div>
-          <button onClick={() => setIsOpen(false)} className="text-white/80 hover:text-white transition-colors">
+          <button
+            onClick={() => setIsOpen(false)}
+            className="text-white/80 hover:text-white transition-colors"
+          >
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -98,13 +108,13 @@ export const AIChatWidget: React.FC = () => {
           {messages.map((msg) => (
             <div
               key={msg.id}
-              className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+              className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
             >
               <div
                 className={`max-w-[80%] rounded-2xl p-3 text-sm leading-relaxed ${
-                  msg.role === 'user'
-                    ? 'bg-indigo-600 text-white rounded-br-none'
-                    : 'bg-slate-800 text-slate-200 rounded-bl-none border border-slate-700'
+                  msg.role === "user"
+                    ? "bg-indigo-600 text-white rounded-br-none"
+                    : "bg-slate-800 text-slate-200 rounded-bl-none border border-slate-700"
                 }`}
               >
                 {msg.text}
@@ -149,10 +159,16 @@ export const AIChatWidget: React.FC = () => {
       <button
         onClick={() => setIsOpen(!isOpen)}
         className={`pointer-events-auto group relative flex items-center justify-center w-14 h-14 rounded-full shadow-xl transition-all duration-300 ${
-          isOpen ? 'bg-slate-700 rotate-90 text-slate-300' : 'bg-indigo-600 hover:bg-indigo-500 text-white hover:scale-110'
+          isOpen
+            ? "bg-slate-700 rotate-90 text-slate-300"
+            : "bg-indigo-600 hover:bg-indigo-500 text-white hover:scale-110"
         }`}
       >
-        {isOpen ? <X className="w-6 h-6" /> : <MessageSquare className="w-6 h-6" />}
+        {isOpen ? (
+          <X className="w-6 h-6" />
+        ) : (
+          <MessageSquare className="w-6 h-6" />
+        )}
         {!isOpen && (
           <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full animate-pulse border-2 border-slate-900"></span>
         )}

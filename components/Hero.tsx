@@ -1,8 +1,13 @@
-import React from 'react';
-import { Button } from './Button';
-import { ArrowRight, CheckCircle2, Instagram } from 'lucide-react';
+import React from "react";
+import { Button } from "./Button";
+import { ArrowRight, CheckCircle2, Instagram } from "lucide-react";
+import { CONTACT, TRUST_INDICATORS } from "../constants";
 
 export const Hero: React.FC = () => {
+  const scrollToContact = () => {
+    document.getElementById("contact")?.scrollIntoView({ behavior: "smooth" });
+  };
+
   return (
     <section className="relative pt-32 pb-20 md:pt-48 md:pb-32 overflow-hidden">
       {/* Abstract Background */}
@@ -20,33 +25,39 @@ export const Hero: React.FC = () => {
             </span>
             Sekarang Menerima Proyek Baru
           </div>
-          
+
           <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold text-white leading-tight tracking-tight mb-8">
-            Bangun <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-teal-400">Aplikasi Impian</span><br />
+            Bangun{" "}
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-teal-400">
+              Aplikasi Impian
+            </span>
+            <br />
             Tanpa Batas.
           </h1>
-          
+
           <p className="text-lg md:text-xl text-slate-400 mb-10 max-w-2xl mx-auto leading-relaxed">
-            Mitra teknologi terpercaya untuk pembuatan Laporan Otomatis, Website Modern, dan Aplikasi Mobile yang membantu bisnis Anda berkembang lebih cepat.
+            Mitra teknologi terpercaya untuk pembuatan Laporan Otomatis, Website
+            Modern, dan Aplikasi Mobile yang membantu bisnis Anda berkembang
+            lebih cepat.
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16">
-            <Button 
-              variant="primary" 
+            <Button
+              variant="primary"
               className="w-full sm:w-auto h-14 !text-lg !px-8"
               rightIcon={<ArrowRight className="w-5 h-5" />}
-              onClick={() => document.getElementById('contact')?.scrollIntoView({ behavior: 'smooth' })}
+              onClick={scrollToContact}
             >
               Konsultasi Gratis
             </Button>
-            <a 
-              href="https://www.instagram.com/uneeddeveloper/" 
-              target="_blank" 
+            <a
+              href={CONTACT.INSTAGRAM_URL}
+              target="_blank"
               rel="noopener noreferrer"
               className="w-full sm:w-auto"
             >
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 className="w-full h-14 !text-lg !px-8"
                 leftIcon={<Instagram className="w-5 h-5" />}
               >
@@ -57,18 +68,12 @@ export const Hero: React.FC = () => {
 
           {/* Trust Indicators */}
           <div className="flex flex-wrap justify-center gap-4 md:gap-12 text-slate-500 font-medium text-sm">
-            <div className="flex items-center gap-2">
-              <CheckCircle2 className="w-5 h-5 text-indigo-500" />
-              <span>Tim Expert</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <CheckCircle2 className="w-5 h-5 text-indigo-500" />
-              <span>Teknologi Terbaru</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <CheckCircle2 className="w-5 h-5 text-indigo-500" />
-              <span>Support 24/7</span>
-            </div>
+            {TRUST_INDICATORS.map((indicator) => (
+              <div key={indicator} className="flex items-center gap-2">
+                <CheckCircle2 className="w-5 h-5 text-indigo-500" />
+                <span>{indicator}</span>
+              </div>
+            ))}
           </div>
         </div>
       </div>

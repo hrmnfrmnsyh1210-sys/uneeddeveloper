@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Button } from "./Button";
 import { Lock, Mail, ArrowLeft, AlertCircle, Info } from "lucide-react";
+import { AUTH, STORAGE_KEYS, LOGIN_SIMULATION_DELAY } from "../constants";
 
 interface LoginProps {
   onLogin: () => void;
@@ -18,22 +19,18 @@ export const Login: React.FC<LoginProps> = ({ onLogin, onBack }) => {
     setError("");
     setIsLoading(true);
 
-    // Simulated login delay
     setTimeout(() => {
-      // Use trim() to remove accidental whitespace from copy-pasting
       const cleanEmail = email.trim();
       const cleanPass = password.trim();
 
-      if (cleanEmail === "admin@uneed.com" && cleanPass === "admin123") {
-        localStorage.setItem("isAuthenticated", "true");
+      if (cleanEmail === AUTH.EMAIL && cleanPass === AUTH.PASSWORD) {
+        localStorage.setItem(STORAGE_KEYS.IS_AUTHENTICATED, "true");
         onLogin();
       } else {
-        setError(
-          "Email atau password salah. Pastikan tidak ada spasi tambahan.",
-        );
+        setError("Email atau password salah. Pastikan tidak ada spasi tambahan.");
         setIsLoading(false);
       }
-    }, 1000);
+    }, LOGIN_SIMULATION_DELAY);
   };
 
   return (
@@ -78,7 +75,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin, onBack }) => {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="w-full bg-slate-950 border border-slate-700 rounded-xl pl-10 pr-4 py-3 text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all"
-                  placeholder="admin@uneed.com"
+                  placeholder={AUTH.EMAIL}
                 />
               </div>
             </div>
@@ -115,9 +112,9 @@ export const Login: React.FC<LoginProps> = ({ onLogin, onBack }) => {
                 </p>
                 <div className="grid grid-cols-[60px_1fr] gap-1 text-slate-400">
                   <span>Email:</span>
-                  <code className="text-indigo-200">admin@uneed.com</code>
+                  <code className="text-indigo-200">{AUTH.EMAIL}</code>
                   <span>Pass:</span>
-                  <code className="text-indigo-200">admin123</code>
+                  <code className="text-indigo-200">{AUTH.PASSWORD}</code>
                 </div>
               </div>
             </div>
