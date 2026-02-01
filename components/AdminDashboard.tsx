@@ -8,6 +8,7 @@ import {
   Plus,
   Trash2,
   Code2,
+  Pencil,
 } from "lucide-react";
 import { Button } from "./Button";
 import { AdminProject, Transaction } from "../types";
@@ -31,7 +32,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
     "overview" | "projects" | "revenue" | "reports"
   >("overview");
 
-  // Data State: Initialize from LocalStorage or Empty Array (No Dummy Data)
+  // Data State
   const [projects, setProjects] = useState<AdminProject[]>(() => {
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem("admin_projects");
@@ -48,7 +49,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
     return [];
   });
 
-  // Persist data when changed
+  // Persist data
   useEffect(() => {
     localStorage.setItem("admin_projects", JSON.stringify(projects));
   }, [projects]);
@@ -74,29 +75,49 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
     (p) => p.status === "Completed",
   ).length;
 
-  // New Item States
+  // --- PROJECT STATE ---
   const [showAddProject, setShowAddProject] = useState(false);
+  const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
   const [newProject, setNewProject] = useState<Partial<AdminProject>>({
     status: "Pending",
   });
+
+  // --- TRANSACTION STATE ---
   const [showAddTrans, setShowAddTrans] = useState(false);
+  const [editingTransId, setEditingTransId] = useState<string | null>(null);
   const [newTrans, setNewTrans] = useState<Partial<Transaction>>({
     type: "Income",
     date: new Date().toISOString().split("T")[0],
   });
 
-  // Handlers
-  const handleAddProject = () => {
+  // --- HANDLERS: PROJECTS ---
+
+  const handleSaveProject = () => {
     if (newProject.name && newProject.client && newProject.value) {
-      const project: AdminProject = {
-        id: Date.now().toString(),
-        name: newProject.name,
-        client: newProject.client,
-        value: Number(newProject.value),
-        status: newProject.status as any,
-        deadline: newProject.deadline || "",
-      };
-      setProjects((prev) => [...prev, project]);
+      if (editingProjectId) {
+        // UPDATE MODE
+        setProjects((prev) =>
+          prev.map((p) =>
+            p.id === editingProjectId
+              ? ({ ...p, ...newProject } as AdminProject)
+              : p,
+          ),
+        );
+        setEditingProjectId(null);
+      } else {
+        // CREATE MODE
+        const project: AdminProject = {
+          id: Date.now().toString(),
+          name: newProject.name,
+          client: newProject.client,
+          value: Number(newProject.value),
+          status: newProject.status as any,
+          deadline: newProject.deadline || "",
+        };
+        setProjects((prev) => [...prev, project]);
+      }
+
+      // Reset Form
       setShowAddProject(false);
       setNewProject({ status: "Pending" });
     } else {
@@ -104,24 +125,52 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
     }
   };
 
+  const handleEditProjectClick = (project: AdminProject) => {
+    setNewProject(project);
+    setEditingProjectId(project.id);
+    setShowAddProject(true);
+  };
+
   const handleDeleteProject = (id: string) => {
     if (confirm("Yakin ingin menghapus project ini secara permanen?")) {
       setProjects((prev) => prev.filter((p) => p.id !== id));
-      // Optional: Delete associated transactions or keep them as orphan records
     }
   };
 
-  const handleAddTrans = () => {
+  const handleCancelProject = () => {
+    setShowAddProject(false);
+    setEditingProjectId(null);
+    setNewProject({ status: "Pending" });
+  };
+
+  // --- HANDLERS: TRANSACTIONS ---
+
+  const handleSaveTrans = () => {
     if (newTrans.description && newTrans.amount) {
-      const trans: Transaction = {
-        id: Date.now().toString(),
-        date: newTrans.date || new Date().toISOString().split("T")[0],
-        description: newTrans.description,
-        amount: Number(newTrans.amount),
-        projectId: newTrans.projectId || "",
-        type: newTrans.type as any,
-      };
-      setTransactions((prev) => [...prev, trans]);
+      if (editingTransId) {
+        // UPDATE MODE
+        setTransactions((prev) =>
+          prev.map((t) =>
+            t.id === editingTransId
+              ? ({ ...t, ...newTrans } as Transaction)
+              : t,
+          ),
+        );
+        setEditingTransId(null);
+      } else {
+        // CREATE MODE
+        const trans: Transaction = {
+          id: Date.now().toString(),
+          date: newTrans.date || new Date().toISOString().split("T")[0],
+          description: newTrans.description,
+          amount: Number(newTrans.amount),
+          projectId: newTrans.projectId || "",
+          type: newTrans.type as any,
+        };
+        setTransactions((prev) => [...prev, trans]);
+      }
+
+      // Reset Form
       setShowAddTrans(false);
       setNewTrans({
         type: "Income",
@@ -132,17 +181,30 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
     }
   };
 
+  const handleEditTransClick = (trans: Transaction) => {
+    setNewTrans(trans);
+    setEditingTransId(trans.id);
+    setShowAddTrans(true);
+  };
+
   const handleDeleteTrans = (id: string) => {
     if (confirm("Hapus transaksi ini? Data akan hilang permanen.")) {
       setTransactions((prev) => prev.filter((t) => t.id !== id));
     }
   };
 
+  const handleCancelTrans = () => {
+    setShowAddTrans(false);
+    setEditingTransId(null);
+    setNewTrans({
+      type: "Income",
+      date: new Date().toISOString().split("T")[0],
+    });
+  };
+
   // Report Data Gen
   const getMonthlyRevenue = () => {
     const monthlyData: { [key: string]: number } = {};
-
-    // Sort transactions by date first
     const sortedTrans = [...transactions].sort(
       (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
     );
@@ -151,7 +213,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
       .filter((t) => t.type === "Income")
       .forEach((t) => {
         const date = new Date(t.date);
-        // Format: "Jan 24"
         const monthYear = date.toLocaleString("id-ID", {
           month: "short",
           year: "2-digit",
@@ -163,8 +224,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
       name,
       value,
     }));
-
-    // Return empty placeholder if no data so chart doesn't break
     if (data.length === 0) return [{ name: "No Data", value: 0 }];
     return data;
   };
@@ -275,7 +334,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                 Manajemen Project
               </h2>
               <Button
-                onClick={() => setShowAddProject(true)}
+                onClick={() => {
+                  setEditingProjectId(null);
+                  setNewProject({ status: "Pending" });
+                  setShowAddProject(true);
+                }}
                 leftIcon={<Plus className="w-4 h-4" />}
               >
                 Project Baru
@@ -285,7 +348,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
             {showAddProject && (
               <div className="bg-slate-800 p-6 rounded-xl border border-slate-700 animate-in fade-in slide-in-from-top-4">
                 <h3 className="text-lg font-bold text-white mb-4">
-                  Tambah Project
+                  {editingProjectId ? "Edit Project" : "Tambah Project"}
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                   <input
@@ -341,13 +404,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                   </select>
                 </div>
                 <div className="flex gap-2 justify-end">
-                  <Button
-                    variant="ghost"
-                    onClick={() => setShowAddProject(false)}
-                  >
+                  <Button variant="ghost" onClick={handleCancelProject}>
                     Batal
                   </Button>
-                  <Button onClick={handleAddProject}>Simpan</Button>
+                  <Button onClick={handleSaveProject}>
+                    {editingProjectId ? "Update" : "Simpan"}
+                  </Button>
                 </div>
               </div>
             )}
@@ -400,12 +462,20 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                           </span>
                         </td>
                         <td className="p-4 text-right">
-                          <button
-                            onClick={() => handleDeleteProject(p.id)}
-                            className="text-red-400 hover:text-red-300 transition-colors p-2 hover:bg-slate-700 rounded-lg"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+                          <div className="flex justify-end gap-2">
+                            <button
+                              onClick={() => handleEditProjectClick(p)}
+                              className="text-indigo-400 hover:text-indigo-300 transition-colors p-2 hover:bg-slate-700 rounded-lg"
+                            >
+                              <Pencil className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteProject(p.id)}
+                              className="text-red-400 hover:text-red-300 transition-colors p-2 hover:bg-slate-700 rounded-lg"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))
@@ -424,7 +494,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                 Manajemen Pendapatan
               </h2>
               <Button
-                onClick={() => setShowAddTrans(true)}
+                onClick={() => {
+                  setEditingTransId(null);
+                  setNewTrans({
+                    type: "Income",
+                    date: new Date().toISOString().split("T")[0],
+                  });
+                  setShowAddTrans(true);
+                }}
                 className="bg-green-600 hover:bg-green-500"
                 leftIcon={<Plus className="w-4 h-4" />}
               >
@@ -435,7 +512,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
             {showAddTrans && (
               <div className="bg-slate-800 p-6 rounded-xl border border-slate-700 animate-in fade-in slide-in-from-top-4">
                 <h3 className="text-lg font-bold text-white mb-4">
-                  Tambah Transaksi
+                  {editingTransId ? "Edit Transaksi" : "Tambah Transaksi"}
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                   <input
@@ -492,17 +569,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                   </select>
                 </div>
                 <div className="flex gap-2 justify-end">
-                  <Button
-                    variant="ghost"
-                    onClick={() => setShowAddTrans(false)}
-                  >
+                  <Button variant="ghost" onClick={handleCancelTrans}>
                     Batal
                   </Button>
                   <Button
-                    onClick={handleAddTrans}
+                    onClick={handleSaveTrans}
                     className="bg-green-600 hover:bg-green-500"
                   >
-                    Simpan
+                    {editingTransId ? "Update" : "Simpan"}
                   </Button>
                 </div>
               </div>
@@ -548,12 +622,20 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                           {t.amount.toLocaleString("id-ID")}
                         </td>
                         <td className="p-4 text-right">
-                          <button
-                            onClick={() => handleDeleteTrans(t.id)}
-                            className="text-red-400 hover:text-red-300 transition-colors p-2 hover:bg-slate-700 rounded-lg"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+                          <div className="flex justify-end gap-2">
+                            <button
+                              onClick={() => handleEditTransClick(t)}
+                              className="text-indigo-400 hover:text-indigo-300 transition-colors p-2 hover:bg-slate-700 rounded-lg"
+                            >
+                              <Pencil className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteTrans(t.id)}
+                              className="text-red-400 hover:text-red-300 transition-colors p-2 hover:bg-slate-700 rounded-lg"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))
