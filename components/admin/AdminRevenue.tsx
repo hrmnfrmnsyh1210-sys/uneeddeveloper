@@ -574,57 +574,6 @@ export const AdminRevenue: React.FC<AdminRevenueProps> = ({
               </ComposedChart>
             </ResponsiveContainer>
           </div>
-
-          {/* Income Status Distribution */}
-          <div className="bg-slate-800 rounded-xl border border-slate-700 p-6 hover:border-indigo-500/30 transition-colors">
-            <div className="mb-6">
-              <h3 className="text-lg font-bold text-white mb-1">
-                Income Status
-              </h3>
-              <p className="text-slate-400 text-sm">
-                Distribusi status pembayaran
-              </p>
-            </div>
-            {incomeDistribution.length > 0 ? (
-              <ResponsiveContainer width="100%" height={240}>
-                <PieChart>
-                  <Pie
-                    data={incomeDistribution}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    label={CustomPieLabel}
-                    outerRadius={90}
-                    fill="#8884d8"
-                    dataKey="value"
-                  >
-                    {incomeDistribution.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    formatter={(value: any) => formatRupiah(value)}
-                    contentStyle={{
-                      backgroundColor: "#1e293b",
-                      border: "1px solid #475569",
-                      borderRadius: "12px",
-                    }}
-                  />
-                  <Legend
-                    verticalAlign="bottom"
-                    height={36}
-                    formatter={(value) => (
-                      <span className="text-slate-300 text-sm">{value}</span>
-                    )}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="h-[240px] flex items-center justify-center text-slate-500">
-                Belum ada data income
-              </div>
-            )}
-          </div>
         </div>
       )}
 

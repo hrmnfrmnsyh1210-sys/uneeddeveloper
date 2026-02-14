@@ -531,54 +531,7 @@ export const AdminReports: React.FC<AdminReportsProps> = ({
           )}
         </div>
 
-        {/* Transaction Status */}
-        <div className="bg-slate-800 rounded-xl border border-slate-700 p-6 hover:border-orange-500/30 transition-colors">
-          <div className="mb-6">
-            <h3 className="text-lg font-bold text-white mb-1">
-              Transaction Status
-            </h3>
-            <p className="text-slate-400 text-sm">
-              Status pembayaran transaksi
-            </p>
-          </div>
-          {transactionStatusData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={240}>
-              <PieChart>
-                <Pie
-                  data={transactionStatusData}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={CustomPieLabel}
-                  outerRadius={85}
-                  fill="#8884d8"
-                  dataKey="value"
-                >
-                  {transactionStatusData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip content={<CustomTooltip />} />
-                <Legend
-                  verticalAlign="bottom"
-                  height={36}
-                  formatter={(value) => (
-                    <span className="text-slate-300 text-sm">{value}</span>
-                  )}
-                />
-              </PieChart>
-            </ResponsiveContainer>
-          ) : (
-            <div className="h-[240px] flex items-center justify-center text-slate-500">
-              Belum ada transaksi
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Top Clients & Monthly Breakdown */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Top Clients */}
+        {/* top client */}
         <div className="bg-slate-800 rounded-xl border border-slate-700 p-6 hover:border-blue-500/30 transition-colors">
           <div className="mb-6">
             <h3 className="text-lg font-bold text-white mb-1">Top Clients</h3>
@@ -624,7 +577,10 @@ export const AdminReports: React.FC<AdminReportsProps> = ({
             </div>
           )}
         </div>
+      </div>
 
+      {/* Monthly Breakdown */}
+      <div className="bg-slate-800 rounded-xl border border-slate-700 p-6 hover:border-blue-500/30 transition-colors">
         {/* Income & Expense Breakdown */}
         <div className="bg-slate-800 rounded-xl border border-slate-700 p-6 hover:border-purple-500/30 transition-colors">
           <div className="mb-6">
