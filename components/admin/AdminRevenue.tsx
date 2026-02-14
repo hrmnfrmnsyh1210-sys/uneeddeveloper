@@ -516,67 +516,6 @@ export const AdminRevenue: React.FC<AdminRevenueProps> = ({
         </div>
       )}
 
-      {/* Charts Row */}
-      {transactions.length > 0 && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Cash Flow - Income vs Expense */}
-          <div className="lg:col-span-2 bg-slate-800 rounded-xl border border-slate-700 p-6 hover:border-green-500/30 transition-colors">
-            <div className="mb-6">
-              <h3 className="text-lg font-bold text-white mb-1">Cash Flow</h3>
-              <p className="text-slate-400 text-sm">
-                Pemasukan vs Pengeluaran bulanan
-              </p>
-            </div>
-            <ResponsiveContainer width="100%" height={280}>
-              <ComposedChart data={chartData}>
-                <defs>
-                  <linearGradient id="colorIncome" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
-                  </linearGradient>
-                  <linearGradient id="colorExpense" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#ef4444" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-                <XAxis dataKey="month" stroke="#94a3b8" fontSize={11} />
-                <YAxis
-                  stroke="#94a3b8"
-                  fontSize={12}
-                  tickFormatter={(value) => `${(value / 1000000).toFixed(0)}jt`}
-                />
-                <Tooltip content={<CustomTooltip />} />
-                <Area
-                  type="monotone"
-                  dataKey="income"
-                  fill="url(#colorIncome)"
-                  stroke="#10b981"
-                  strokeWidth={2}
-                  name="Income"
-                />
-                <Area
-                  type="monotone"
-                  dataKey="expense"
-                  fill="url(#colorExpense)"
-                  stroke="#ef4444"
-                  strokeWidth={2}
-                  name="Expense"
-                />
-                <Line
-                  type="monotone"
-                  dataKey="net"
-                  stroke="#6366f1"
-                  strokeWidth={3}
-                  dot={{ fill: "#6366f1", r: 4 }}
-                  name="Net"
-                />
-              </ComposedChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-      )}
-
       {/* Secondary Charts Row */}
       {transactions.length > 0 && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
