@@ -77,6 +77,7 @@ export const useAdminData = () => {
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEYS.PORTFOLIO_ITEMS, JSON.stringify(portfolioItems));
+    window.dispatchEvent(new CustomEvent("portfolio-updated"));
   }, [portfolioItems]);
 
   // ===== Load Cloud Config on mount =====

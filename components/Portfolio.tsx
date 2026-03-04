@@ -58,11 +58,16 @@ const CATEGORY_GRADIENT: Record<string, string> = {
 const getCategoryBadge = (cat: string) => CATEGORY_BADGE[cat] ?? "text-indigo-400";
 const getCategoryGradient = (cat: string) => CATEGORY_GRADIENT[cat] ?? "from-slate-700/30 to-slate-900/60";
 
-const getScreenshotUrl = (link: string) =>
-  `https://image.thum.io/get/width/800/crop/500/noanimate/${link}`;
+// Screenshot services, dipakai berurutan sebagai fallback
+const SCREENSHOT_SERVICES = [
+  (url: string) =>
+    `https://s.wordpress.com/mshots/v1/${encodeURIComponent(url)}?w=800&h=500`,
+  (url: string) =>
+    `https://api.microlink.io/?url=${encodeURIComponent(url)}&screenshot=true&meta=false&embed=screenshot.url`,
+];
 
 const hasValidLink = (link: string) =>
-  link && link !== "#" && link.startsWith("http");
+  Boolean(link && link !== "#" && link.startsWith("http"));
 
 interface PortfolioCardProps {
   item: PortfolioItem;
@@ -70,34 +75,46 @@ interface PortfolioCardProps {
 
 const PortfolioCard: React.FC<PortfolioCardProps> = ({ item }) => {
   const [imgLoaded, setImgLoaded] = useState(false);
-  const [imgError, setImgError] = useState(false);
+  const [serviceIndex, setServiceIndex] = useState(0);
   const showScreenshot = hasValidLink(item.link);
+  const allFailed = serviceIndex >= SCREENSHOT_SERVICES.length;
+
+  const handleImgError = () => {
+    // Coba service berikutnya
+    setServiceIndex((prev) => prev + 1);
+  };
+
+  const currentSrc =
+    showScreenshot && !allFailed
+      ? SCREENSHOT_SERVICES[serviceIndex](item.link)
+      : null;
 
   return (
     <div className="group relative overflow-hidden rounded-2xl bg-slate-900 border border-slate-800 hover:border-slate-600 transition-all duration-300">
       {/* Thumbnail area */}
       <div className="aspect-video overflow-hidden relative bg-slate-800">
-        {showScreenshot && !imgError ? (
+        {currentSrc ? (
           <>
             {/* Skeleton while loading */}
             {!imgLoaded && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-slate-800 animate-pulse">
-                <Globe className="w-8 h-8 text-slate-600" />
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-slate-800">
+                <div className="w-8 h-8 rounded-full border-2 border-slate-600 border-t-indigo-500 animate-spin" />
                 <span className="text-slate-500 text-xs">Memuat preview...</span>
               </div>
             )}
             <img
-              src={getScreenshotUrl(item.link)}
+              key={currentSrc}
+              src={currentSrc}
               alt={item.title}
               onLoad={() => setImgLoaded(true)}
-              onError={() => setImgError(true)}
+              onError={handleImgError}
               className={`w-full h-full object-cover object-top transition-all duration-700 group-hover:scale-105 ${
-                imgLoaded ? "opacity-80 group-hover:opacity-100" : "opacity-0"
+                imgLoaded ? "opacity-90 group-hover:opacity-100" : "opacity-0"
               }`}
             />
           </>
         ) : (
-          /* Fallback gradient when no valid URL or image fails */
+          /* Fallback gradient */
           <div
             className={`absolute inset-0 bg-gradient-to-br ${getCategoryGradient(item.category)} flex items-center justify-center`}
           >
@@ -142,18 +159,26 @@ const PortfolioCard: React.FC<PortfolioCardProps> = ({ item }) => {
 };
 
 export const Portfolio: React.FC = () => {
-  const [items, setItems] = useState<PortfolioItem[]>(() => {
-    const adminItems = parseLocalStorage<PortfolioItem[]>(STORAGE_KEYS.PORTFOLIO_ITEMS, []);
-    return adminItems.length > 0 ? adminItems : STATIC_PORTFOLIO;
-  });
+  const [items, setItems] = useState<PortfolioItem[]>(STATIC_PORTFOLIO);
 
   useEffect(() => {
-    const handleStorageChange = () => {
-      const updated = parseLocalStorage<PortfolioItem[]>(STORAGE_KEYS.PORTFOLIO_ITEMS, []);
-      setItems(updated.length > 0 ? updated : STATIC_PORTFOLIO);
+    const refresh = () => {
+      const adminItems = parseLocalStorage<PortfolioItem[]>(STORAGE_KEYS.PORTFOLIO_ITEMS, []);
+      setItems(adminItems.length > 0 ? adminItems : STATIC_PORTFOLIO);
     };
-    window.addEventListener("storage", handleStorageChange);
-    return () => window.removeEventListener("storage", handleStorageChange);
+
+    // Baca saat mount
+    refresh();
+
+    // Update saat admin menyimpan (same-tab)
+    window.addEventListener("portfolio-updated", refresh);
+    // Update saat tab lain menyimpan
+    window.addEventListener("storage", refresh);
+
+    return () => {
+      window.removeEventListener("portfolio-updated", refresh);
+      window.removeEventListener("storage", refresh);
+    };
   }, []);
 
   return (
