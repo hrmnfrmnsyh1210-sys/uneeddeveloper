@@ -4,6 +4,42 @@ import { PortfolioItem } from "../types";
 import { STORAGE_KEYS } from "../constants";
 import { parseLocalStorage } from "../utils/helpers";
 
+// ===== Cloud Fetch =====
+// Prioritas: env var → localStorage config → fallback
+const getJsonBinConfig = () => {
+  const binId =
+    (import.meta.env.VITE_JSONBIN_BIN_ID as string | undefined) ||
+    parseLocalStorage<{ binId: string; apiKey: string } | null>(
+      STORAGE_KEYS.JSONBIN_CONFIG,
+      null
+    )?.binId;
+
+  const apiKey =
+    (import.meta.env.VITE_JSONBIN_API_KEY as string | undefined) ||
+    parseLocalStorage<{ binId: string; apiKey: string } | null>(
+      STORAGE_KEYS.JSONBIN_CONFIG,
+      null
+    )?.apiKey;
+
+  return { binId, apiKey };
+};
+
+const fetchPortfolioFromCloud = async (): Promise<PortfolioItem[] | null> => {
+  const { binId, apiKey } = getJsonBinConfig();
+  if (!binId) return null;
+  try {
+    const headers: Record<string, string> = {};
+    if (apiKey) headers["X-Master-Key"] = apiKey;
+    const res = await fetch(`https://api.jsonbin.io/v3/b/${binId}/latest`, { headers });
+    if (!res.ok) return null;
+    const data = await res.json();
+    const items: PortfolioItem[] = data?.record?.portfolioItems;
+    return Array.isArray(items) && items.length > 0 ? items : null;
+  } catch {
+    return null;
+  }
+};
+
 const STATIC_PORTFOLIO: PortfolioItem[] = [
   {
     id: "s1",
@@ -164,18 +200,20 @@ const readPortfolioItems = (): PortfolioItem[] => {
 };
 
 export const Portfolio: React.FC = () => {
-  // Lazy initializer: baca localStorage SAAT render pertama (bukan setelah mount)
-  // sehingga tidak ada flash tampilan statis
   const [items, setItems] = useState<PortfolioItem[]>(readPortfolioItems);
 
   useEffect(() => {
+    // Fetch dari JSONBin cloud agar tampil di semua device/akun
+    fetchPortfolioFromCloud().then((cloudItems) => {
+      if (cloudItems) {
+        setItems(cloudItems);
+        localStorage.setItem(STORAGE_KEYS.PORTFOLIO_ITEMS, JSON.stringify(cloudItems));
+      }
+    });
+
     const refresh = () => setItems(readPortfolioItems());
-
-    // Update saat admin menyimpan di tab yang sama
     window.addEventListener("portfolio-updated", refresh);
-    // Update saat tab lain menyimpan
     window.addEventListener("storage", refresh);
-
     return () => {
       window.removeEventListener("portfolio-updated", refresh);
       window.removeEventListener("storage", refresh);
