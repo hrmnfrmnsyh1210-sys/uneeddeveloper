@@ -3,6 +3,7 @@ import {
   AdminProject,
   Transaction,
   TeamMember,
+  PortfolioItem,
   SyncStatus,
   JsonBinConfig,
   ProjectStatus,
@@ -12,6 +13,7 @@ import {
   STORAGE_KEYS,
   SYNC_STATUS_RESET_DELAY,
   DEFAULT_PROJECT_FORM,
+  DEFAULT_PORTFOLIO_FORM,
   getDefaultTransactionForm,
 } from "../../constants";
 import { parseLocalStorage, generateId, getTodayISO } from "../../utils/helpers";
@@ -27,6 +29,9 @@ export const useAdminData = () => {
   );
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>(() =>
     parseLocalStorage(STORAGE_KEYS.TEAM_MEMBERS, [])
+  );
+  const [portfolioItems, setPortfolioItems] = useState<PortfolioItem[]>(() =>
+    parseLocalStorage(STORAGE_KEYS.PORTFOLIO_ITEMS, [])
   );
 
   // ===== Cloud Config =====
@@ -52,6 +57,11 @@ export const useAdminData = () => {
   const [editingTransId, setEditingTransId] = useState<string | null>(null);
   const [newTrans, setNewTrans] = useState<Partial<Transaction>>(getDefaultTransactionForm());
 
+  // ===== Portfolio Form State =====
+  const [showAddPortfolio, setShowAddPortfolio] = useState(false);
+  const [editingPortfolioId, setEditingPortfolioId] = useState<string | null>(null);
+  const [newPortfolioItem, setNewPortfolioItem] = useState<Partial<PortfolioItem>>(DEFAULT_PORTFOLIO_FORM);
+
   // ===== Persist to localStorage =====
   useEffect(() => {
     localStorage.setItem(STORAGE_KEYS.ADMIN_PROJECTS, JSON.stringify(projects));
@@ -64,6 +74,10 @@ export const useAdminData = () => {
   useEffect(() => {
     localStorage.setItem(STORAGE_KEYS.TEAM_MEMBERS, JSON.stringify(teamMembers));
   }, [teamMembers]);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.PORTFOLIO_ITEMS, JSON.stringify(portfolioItems));
+  }, [portfolioItems]);
 
   // ===== Load Cloud Config on mount =====
   useEffect(() => {
@@ -90,12 +104,15 @@ export const useAdminData = () => {
         const cloudProjects = record.projects || [];
         const cloudTransactions = record.transactions || [];
         const cloudTeamMembers = record.teamMembers || [];
+        const cloudPortfolioItems = record.portfolioItems || [];
         setProjects(cloudProjects);
         setTransactions(cloudTransactions);
         setTeamMembers(cloudTeamMembers);
+        setPortfolioItems(cloudPortfolioItems);
         localStorage.setItem(STORAGE_KEYS.ADMIN_PROJECTS, JSON.stringify(cloudProjects));
         localStorage.setItem(STORAGE_KEYS.ADMIN_TRANSACTIONS, JSON.stringify(cloudTransactions));
         localStorage.setItem(STORAGE_KEYS.TEAM_MEMBERS, JSON.stringify(cloudTeamMembers));
+        localStorage.setItem(STORAGE_KEYS.PORTFOLIO_ITEMS, JSON.stringify(cloudPortfolioItems));
         setSyncStatus("success");
         resetSyncStatus();
       }
@@ -110,7 +127,8 @@ export const useAdminData = () => {
   const handleSaveToCloud = async (
     currentProjects: AdminProject[],
     currentTransactions: Transaction[],
-    currentTeamMembers?: TeamMember[]
+    currentTeamMembers?: TeamMember[],
+    currentPortfolioItems?: PortfolioItem[]
   ) => {
     if (!jsonBinConfig.binId || !jsonBinConfig.apiKey) return;
     setIsSyncing(true);
@@ -119,6 +137,7 @@ export const useAdminData = () => {
         projects: currentProjects,
         transactions: currentTransactions,
         teamMembers: currentTeamMembers ?? teamMembers,
+        portfolioItems: currentPortfolioItems ?? portfolioItems,
         lastUpdated: new Date().toISOString(),
       };
       const ok = await updateBin(jsonBinConfig.binId, jsonBinConfig.apiKey, payload);
@@ -316,6 +335,7 @@ export const useAdminData = () => {
         projects,
         transactions,
         teamMembers,
+        portfolioItems,
         lastUpdated: new Date().toISOString(),
       };
       const newBinId = await createBin(jsonBinConfig.apiKey, payload);
@@ -403,6 +423,63 @@ export const useAdminData = () => {
     setShowAddMember(true);
   };
 
+  // ===== Portfolio CRUD =====
+  const handleSavePortfolio = async () => {
+    if (!newPortfolioItem.title || !newPortfolioItem.link) {
+      alert("Mohon lengkapi judul dan link portfolio.");
+      return;
+    }
+
+    let updatedItems: PortfolioItem[];
+
+    if (editingPortfolioId) {
+      updatedItems = portfolioItems.map((p) =>
+        p.id === editingPortfolioId ? ({ ...p, ...newPortfolioItem } as PortfolioItem) : p
+      );
+      setEditingPortfolioId(null);
+    } else {
+      const item: PortfolioItem = {
+        id: generateId(),
+        title: newPortfolioItem.title,
+        category: newPortfolioItem.category || "Web App",
+        description: newPortfolioItem.description || "",
+        link: newPortfolioItem.link,
+      };
+      updatedItems = [...portfolioItems, item];
+    }
+
+    setPortfolioItems(updatedItems);
+    await handleSaveToCloud(projects, transactions, teamMembers, updatedItems);
+    setShowAddPortfolio(false);
+    setNewPortfolioItem(DEFAULT_PORTFOLIO_FORM);
+  };
+
+  const handleEditPortfolioClick = (item: PortfolioItem) => {
+    setNewPortfolioItem(item);
+    setEditingPortfolioId(item.id);
+    setShowAddPortfolio(true);
+  };
+
+  const handleDeletePortfolio = async (id: string) => {
+    if (confirm("Yakin ingin menghapus item portfolio ini?")) {
+      const updatedItems = portfolioItems.filter((p) => p.id !== id);
+      setPortfolioItems(updatedItems);
+      await handleSaveToCloud(projects, transactions, teamMembers, updatedItems);
+    }
+  };
+
+  const handleCancelPortfolio = () => {
+    setShowAddPortfolio(false);
+    setEditingPortfolioId(null);
+    setNewPortfolioItem(DEFAULT_PORTFOLIO_FORM);
+  };
+
+  const handleOpenAddPortfolio = () => {
+    setEditingPortfolioId(null);
+    setNewPortfolioItem(DEFAULT_PORTFOLIO_FORM);
+    setShowAddPortfolio(true);
+  };
+
   // ===== Derived: Revenue per Team Member =====
   const getMemberRevenue = (memberId: string): number => {
     return transactions.reduce((total, t) => {
@@ -445,6 +522,7 @@ export const useAdminData = () => {
     // Data
     projects,
     transactions,
+    portfolioItems,
     // Stats
     totalRevenue,
     totalExpenses,
@@ -494,6 +572,16 @@ export const useAdminData = () => {
     handleOpenAddMember,
     getMemberRevenue,
     getTotalSplitRevenue,
+    // Portfolio
+    showAddPortfolio,
+    editingPortfolioId,
+    newPortfolioItem,
+    setNewPortfolioItem,
+    handleSavePortfolio,
+    handleEditPortfolioClick,
+    handleDeletePortfolio,
+    handleCancelPortfolio,
+    handleOpenAddPortfolio,
     // Reports
     handleExportData,
     getMonthlyRevenue,

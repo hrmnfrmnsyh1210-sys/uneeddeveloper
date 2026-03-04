@@ -81,6 +81,16 @@ export interface JsonBinConfig {
   apiKey: string;
 }
 
+// ===== Portfolio Types =====
+
+export interface PortfolioItem {
+  id: string;
+  title: string;
+  category: string;
+  description: string;
+  link: string;
+}
+
 // ===== Navigation Types =====
 
 export type PageName = "home" | "login" | "admin";

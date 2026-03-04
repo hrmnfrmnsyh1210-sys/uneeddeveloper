@@ -23,6 +23,7 @@ export const STORAGE_KEYS = {
   ADMIN_TRANSACTIONS: "admin_transactions",
   JSONBIN_CONFIG: "jsonbin_config",
   TEAM_MEMBERS: "admin_team_members",
+  PORTFOLIO_ITEMS: "portfolio_items",
 } as const;
 
 // ===== API =====
@@ -38,7 +39,7 @@ export const NAV_LINKS = [
 ] as const;
 
 // ===== Admin Tabs =====
-export type AdminTab = "overview" | "projects" | "revenue" | "team" | "reports" | "database";
+export type AdminTab = "overview" | "projects" | "revenue" | "team" | "portfolio" | "reports" | "database";
 
 // ===== Project Status & Transaction Type =====
 export const PROJECT_STATUSES = ["Pending", "In Progress", "Completed", "Cancelled"] as const;
@@ -104,6 +105,21 @@ export const DEFAULT_CONTACT_FORM = {
 export const DEFAULT_PROJECT_FORM = {
   status: "Pending" as const,
 };
+
+export const DEFAULT_PORTFOLIO_FORM = {
+  title: "",
+  category: "Web App",
+  description: "",
+  link: "",
+};
+
+export const PORTFOLIO_CATEGORIES = [
+  "Web App",
+  "Mobile App",
+  "Reporting",
+  "Backend & API",
+  "Custom System",
+] as const;
 
 export const getDefaultTransactionForm = () => ({
   type: "Income" as const,

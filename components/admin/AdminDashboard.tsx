@@ -10,6 +10,7 @@ import {
   Menu,
   X,
   Users,
+  Image,
 } from "lucide-react";
 import { AdminTab } from "../../constants";
 import { useAdminData } from "./useAdminData";
@@ -17,6 +18,7 @@ import { AdminOverview } from "./AdminOverview";
 import { AdminProjects } from "./AdminProjects";
 import { AdminRevenue } from "./AdminRevenue";
 import { AdminTeam } from "./AdminTeam";
+import { AdminPortfolio } from "./AdminPortfolio";
 import { AdminReports } from "./AdminReports";
 import { AdminDatabase } from "./AdminDatabase";
 
@@ -29,6 +31,7 @@ const TABS: { id: AdminTab; label: string; icon: React.ReactNode }[] = [
   { id: "projects", label: "Projects", icon: <FolderKanban className="w-5 h-5" /> },
   { id: "revenue", label: "Pendapatan", icon: <DollarSign className="w-5 h-5" /> },
   { id: "team", label: "Tim", icon: <Users className="w-5 h-5" /> },
+  { id: "portfolio", label: "Portfolio", icon: <Image className="w-5 h-5" /> },
   { id: "reports", label: "Laporan", icon: <BarChart3 className="w-5 h-5" /> },
   { id: "database", label: "Database", icon: <Cloud className="w-5 h-5" /> },
 ];
@@ -105,6 +108,22 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
             onAdd={data.handleOpenAddMember}
             getMemberRevenue={data.getMemberRevenue}
             getTotalSplitRevenue={data.getTotalSplitRevenue}
+          />
+        );
+      case "portfolio":
+        return (
+          <AdminPortfolio
+            portfolioItems={data.portfolioItems}
+            showAddPortfolio={data.showAddPortfolio}
+            editingPortfolioId={data.editingPortfolioId}
+            newPortfolioItem={data.newPortfolioItem}
+            setNewPortfolioItem={data.setNewPortfolioItem}
+            isSyncing={data.isSyncing}
+            onSave={data.handleSavePortfolio}
+            onEdit={data.handleEditPortfolioClick}
+            onDelete={data.handleDeletePortfolio}
+            onCancel={data.handleCancelPortfolio}
+            onAdd={data.handleOpenAddPortfolio}
           />
         );
       case "reports":
