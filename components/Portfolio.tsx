@@ -158,19 +158,20 @@ const PortfolioCard: React.FC<PortfolioCardProps> = ({ item }) => {
   );
 };
 
+const readPortfolioItems = (): PortfolioItem[] => {
+  const adminItems = parseLocalStorage<PortfolioItem[]>(STORAGE_KEYS.PORTFOLIO_ITEMS, []);
+  return adminItems.length > 0 ? adminItems : STATIC_PORTFOLIO;
+};
+
 export const Portfolio: React.FC = () => {
-  const [items, setItems] = useState<PortfolioItem[]>(STATIC_PORTFOLIO);
+  // Lazy initializer: baca localStorage SAAT render pertama (bukan setelah mount)
+  // sehingga tidak ada flash tampilan statis
+  const [items, setItems] = useState<PortfolioItem[]>(readPortfolioItems);
 
   useEffect(() => {
-    const refresh = () => {
-      const adminItems = parseLocalStorage<PortfolioItem[]>(STORAGE_KEYS.PORTFOLIO_ITEMS, []);
-      setItems(adminItems.length > 0 ? adminItems : STATIC_PORTFOLIO);
-    };
+    const refresh = () => setItems(readPortfolioItems());
 
-    // Baca saat mount
-    refresh();
-
-    // Update saat admin menyimpan (same-tab)
+    // Update saat admin menyimpan di tab yang sama
     window.addEventListener("portfolio-updated", refresh);
     // Update saat tab lain menyimpan
     window.addEventListener("storage", refresh);
