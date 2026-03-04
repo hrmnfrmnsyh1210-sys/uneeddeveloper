@@ -194,24 +194,41 @@ const PortfolioCard: React.FC<PortfolioCardProps> = ({ item }) => {
   );
 };
 
-const readPortfolioItems = (): PortfolioItem[] => {
+const readLocalItems = (): PortfolioItem[] => {
   const adminItems = parseLocalStorage<PortfolioItem[]>(STORAGE_KEYS.PORTFOLIO_ITEMS, []);
   return adminItems.length > 0 ? adminItems : STATIC_PORTFOLIO;
 };
 
+// Apakah kredensial cloud tersedia di build ini?
+const HAS_CLOUD_CONFIG = Boolean(import.meta.env.VITE_JSONBIN_BIN_ID);
+
 export const Portfolio: React.FC = () => {
-  const [items, setItems] = useState<PortfolioItem[]>(readPortfolioItems);
+  const [items, setItems] = useState<PortfolioItem[]>(() =>
+    HAS_CLOUD_CONFIG ? [] : readLocalItems()
+  );
+  const [loading, setLoading] = useState(HAS_CLOUD_CONFIG);
 
   useEffect(() => {
-    // Fetch dari JSONBin cloud agar tampil di semua device/akun
-    fetchPortfolioFromCloud().then((cloudItems) => {
-      if (cloudItems) {
-        setItems(cloudItems);
-        localStorage.setItem(STORAGE_KEYS.PORTFOLIO_ITEMS, JSON.stringify(cloudItems));
-      }
-    });
+    if (HAS_CLOUD_CONFIG) {
+      // Selalu ambil dari cloud — kredensial sudah tertanam di build
+      fetchPortfolioFromCloud().then((cloudItems) => {
+        if (cloudItems) {
+          setItems(cloudItems);
+          localStorage.setItem(STORAGE_KEYS.PORTFOLIO_ITEMS, JSON.stringify(cloudItems));
+        } else {
+          // Fallback ke data lokal jika cloud gagal
+          setItems(readLocalItems());
+        }
+        setLoading(false);
+      });
+    }
 
-    const refresh = () => setItems(readPortfolioItems());
+    // Dengarkan update dari admin (tab yang sama maupun lintas tab)
+    const refresh = () => {
+      fetchPortfolioFromCloud().then((cloudItems) => {
+        setItems(cloudItems ?? readLocalItems());
+      });
+    };
     window.addEventListener("portfolio-updated", refresh);
     window.addEventListener("storage", refresh);
     return () => {
@@ -232,11 +249,27 @@ export const Portfolio: React.FC = () => {
           </h3>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {items.map((item) => (
-            <PortfolioCard key={item.id} item={item} />
-          ))}
-        </div>
+        {loading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {[1, 2, 3, 4].map((n) => (
+              <div key={n} className="rounded-2xl bg-slate-900 border border-slate-800 overflow-hidden animate-pulse">
+                <div className="aspect-video bg-slate-800" />
+                <div className="p-6 space-y-3">
+                  <div className="h-3 w-20 bg-slate-700 rounded" />
+                  <div className="h-5 w-3/4 bg-slate-700 rounded" />
+                  <div className="h-3 w-full bg-slate-800 rounded" />
+                  <div className="h-3 w-2/3 bg-slate-800 rounded" />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {items.map((item) => (
+              <PortfolioCard key={item.id} item={item} />
+            ))}
+          </div>
+        )}
       </div>
     </section>
   );
