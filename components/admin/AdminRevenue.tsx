@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   Plus,
   Pencil,
@@ -8,6 +8,8 @@ import {
   TrendingUp,
   TrendingDown,
   PieChart as PieChartIcon,
+  X,
+  Search,
 } from "lucide-react";
 import { Button } from "../Button";
 import { FormInput, FormSelect } from "../ui/FormInput";
@@ -77,6 +79,19 @@ export const AdminRevenue: React.FC<AdminRevenueProps> = ({
   onCancel,
   onAdd,
 }) => {
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const filteredTransactions = transactions.filter((t) => {
+    const q = searchQuery.toLowerCase();
+    const projectName = projects.find((p) => p.id === t.projectId)?.name ?? "";
+    return (
+      t.description.toLowerCase().includes(q) ||
+      t.date.includes(q) ||
+      t.type.toLowerCase().includes(q) ||
+      projectName.toLowerCase().includes(q)
+    );
+  });
+
   const currentSplits: RevenueSplit[] = newTrans.splits || [];
   const totalSplitAmount = currentSplits.reduce((sum, s) => sum + s.amount, 0);
   const transAmount = Number(newTrans.amount) || 0;
@@ -298,155 +313,166 @@ export const AdminRevenue: React.FC<AdminRevenueProps> = ({
       </div>
 
       {showAddTrans && (
-        <div className="bg-slate-800 p-6 rounded-xl border border-slate-700 animate-in fade-in slide-in-from-top-4">
-          <h3 className="text-lg font-bold text-white mb-4">
-            {editingTransId ? "Edit Transaksi" : "Tambah Transaksi"}
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-            <FormInput
-              type="date"
-              value={newTrans.date}
-              onChange={(e) =>
-                setNewTrans({ ...newTrans, date: e.target.value })
-              }
-            />
-            <FormInput
-              placeholder="Deskripsi"
-              value={newTrans.description || ""}
-              onChange={(e) =>
-                setNewTrans({ ...newTrans, description: e.target.value })
-              }
-            />
-            <FormInput
-              type="number"
-              placeholder="Jumlah (Rp)"
-              value={newTrans.amount || ""}
-              onChange={(e) =>
-                setNewTrans({ ...newTrans, amount: Number(e.target.value) })
-              }
-            />
-            <FormSelect
-              value={newTrans.type}
-              onChange={(e) =>
-                setNewTrans({ ...newTrans, type: e.target.value as any })
-              }
-            >
-              <option value="Income">Pemasukan (+)</option>
-              <option value="Expense">Pengeluaran (-)</option>
-            </FormSelect>
-            <FormSelect
-              value={newTrans.projectId}
-              onChange={(e) =>
-                setNewTrans({ ...newTrans, projectId: e.target.value })
-              }
-            >
-              <option value="">-- Pilih Project (Opsional) --</option>
-              {projects.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}
-                </option>
-              ))}
-            </FormSelect>
-          </div>
-
-          {/* Revenue Split Section - Only for Income */}
-          {isIncome && teamMembers.length > 0 && (
-            <div className="mt-4 p-4 bg-slate-900 rounded-lg border border-slate-700">
-              <div className="flex justify-between items-center mb-3">
-                <h4 className="text-sm font-semibold text-slate-300">
-                  Pembagian ke Tim
-                </h4>
-                <button
-                  type="button"
-                  onClick={handleAddSplit}
-                  className="text-xs text-indigo-400 hover:text-indigo-300 flex items-center gap-1"
-                >
-                  <Plus className="w-3 h-3" /> Tambah
-                </button>
-              </div>
-
-              {currentSplits.length === 0 ? (
-                <p className="text-xs text-slate-500">
-                  Belum ada pembagian. Klik "Tambah" untuk membagi pendapatan ke
-                  anggota tim.
-                </p>
-              ) : (
-                <div className="space-y-2">
-                  {currentSplits.map((split, index) => (
-                    <div key={index} className="flex items-center gap-2">
-                      <select
-                        value={split.memberId}
-                        onChange={(e) =>
-                          handleUpdateSplit(index, "memberId", e.target.value)
-                        }
-                        className="flex-1 bg-slate-800 border border-slate-600 p-2 rounded text-white text-sm focus:border-indigo-500 outline-none"
-                      >
-                        <option value="">-- Pilih Anggota --</option>
-                        {teamMembers.map((m) => (
-                          <option key={m.id} value={m.id}>
-                            {m.name} ({m.role})
-                          </option>
-                        ))}
-                      </select>
-                      <input
-                        type="number"
-                        placeholder="Nominal (Rp)"
-                        value={split.amount || ""}
-                        onChange={(e) =>
-                          handleUpdateSplit(index, "amount", e.target.value)
-                        }
-                        className="w-40 bg-slate-800 border border-slate-600 p-2 rounded text-white text-sm focus:border-indigo-500 outline-none"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveSplit(index)}
-                        className="text-red-400 hover:text-red-300 p-1"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  ))}
-
-                  {transAmount > 0 && (
-                    <div
-                      className={`flex items-center gap-2 text-xs mt-2 ${
-                        remaining < 0
-                          ? "text-red-400"
-                          : remaining > 0
-                            ? "text-yellow-400"
-                            : "text-green-400"
-                      }`}
-                    >
-                      <AlertCircle className="w-3 h-3" />
-                      {remaining === 0
-                        ? "Semua pendapatan sudah terbagi."
-                        : remaining > 0
-                          ? `Sisa belum dibagi: ${formatRupiah(remaining)}`
-                          : `Melebihi total transaksi: ${formatRupiah(Math.abs(remaining))}`}
-                    </div>
-                  )}
-                </div>
-              )}
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onCancel} />
+          <div className="relative w-full max-w-lg bg-slate-800 rounded-xl border border-slate-700 shadow-2xl p-6 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold text-white">
+                {editingTransId ? "Edit Transaksi" : "Tambah Transaksi"}
+              </h3>
+              <button
+                onClick={onCancel}
+                className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-700 rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
             </div>
-          )}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              <FormInput
+                type="date"
+                value={newTrans.date}
+                onChange={(e) =>
+                  setNewTrans({ ...newTrans, date: e.target.value })
+                }
+              />
+              <FormInput
+                placeholder="Deskripsi"
+                value={newTrans.description || ""}
+                onChange={(e) =>
+                  setNewTrans({ ...newTrans, description: e.target.value })
+                }
+              />
+              <FormInput
+                type="number"
+                placeholder="Jumlah (Rp)"
+                value={newTrans.amount || ""}
+                onChange={(e) =>
+                  setNewTrans({ ...newTrans, amount: Number(e.target.value) })
+                }
+              />
+              <FormSelect
+                value={newTrans.type}
+                onChange={(e) =>
+                  setNewTrans({ ...newTrans, type: e.target.value as any })
+                }
+              >
+                <option value="Income">Pemasukan (+)</option>
+                <option value="Expense">Pengeluaran (-)</option>
+              </FormSelect>
+              <FormSelect
+                value={newTrans.projectId}
+                onChange={(e) =>
+                  setNewTrans({ ...newTrans, projectId: e.target.value })
+                }
+              >
+                <option value="">-- Pilih Project (Opsional) --</option>
+                {projects.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))}
+              </FormSelect>
+            </div>
 
-          {isIncome && teamMembers.length === 0 && (
-            <p className="text-xs text-slate-500 mt-2">
-              Tambahkan anggota tim di tab "Tim" untuk bisa membagi pendapatan.
-            </p>
-          )}
+            {/* Revenue Split Section - Only for Income */}
+            {isIncome && teamMembers.length > 0 && (
+              <div className="mt-4 p-4 bg-slate-900 rounded-lg border border-slate-700">
+                <div className="flex justify-between items-center mb-3">
+                  <h4 className="text-sm font-semibold text-slate-300">
+                    Pembagian ke Tim
+                  </h4>
+                  <button
+                    type="button"
+                    onClick={handleAddSplit}
+                    className="text-xs text-indigo-400 hover:text-indigo-300 flex items-center gap-1"
+                  >
+                    <Plus className="w-3 h-3" /> Tambah
+                  </button>
+                </div>
 
-          <div className="flex gap-2 justify-end mt-4">
-            <Button variant="ghost" onClick={onCancel}>
-              Batal
-            </Button>
-            <Button
-              onClick={onSave}
-              className="bg-green-600 hover:bg-green-500"
-              isLoading={isSyncing}
-            >
-              {editingTransId ? "Update & Sync" : "Simpan & Sync"}
-            </Button>
+                {currentSplits.length === 0 ? (
+                  <p className="text-xs text-slate-500">
+                    Belum ada pembagian. Klik "Tambah" untuk membagi pendapatan ke
+                    anggota tim.
+                  </p>
+                ) : (
+                  <div className="space-y-2">
+                    {currentSplits.map((split, index) => (
+                      <div key={index} className="flex items-center gap-2">
+                        <select
+                          value={split.memberId}
+                          onChange={(e) =>
+                            handleUpdateSplit(index, "memberId", e.target.value)
+                          }
+                          className="flex-1 bg-slate-800 border border-slate-600 p-2 rounded text-white text-sm focus:border-indigo-500 outline-none"
+                        >
+                          <option value="">-- Pilih Anggota --</option>
+                          {teamMembers.map((m) => (
+                            <option key={m.id} value={m.id}>
+                              {m.name} ({m.role})
+                            </option>
+                          ))}
+                        </select>
+                        <input
+                          type="number"
+                          placeholder="Nominal (Rp)"
+                          value={split.amount || ""}
+                          onChange={(e) =>
+                            handleUpdateSplit(index, "amount", e.target.value)
+                          }
+                          className="w-40 bg-slate-800 border border-slate-600 p-2 rounded text-white text-sm focus:border-indigo-500 outline-none"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveSplit(index)}
+                          className="text-red-400 hover:text-red-300 p-1"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ))}
+
+                    {transAmount > 0 && (
+                      <div
+                        className={`flex items-center gap-2 text-xs mt-2 ${
+                          remaining < 0
+                            ? "text-red-400"
+                            : remaining > 0
+                              ? "text-yellow-400"
+                              : "text-green-400"
+                        }`}
+                      >
+                        <AlertCircle className="w-3 h-3" />
+                        {remaining === 0
+                          ? "Semua pendapatan sudah terbagi."
+                          : remaining > 0
+                            ? `Sisa belum dibagi: ${formatRupiah(remaining)}`
+                            : `Melebihi total transaksi: ${formatRupiah(Math.abs(remaining))}`}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {isIncome && teamMembers.length === 0 && (
+              <p className="text-xs text-slate-500 mt-2">
+                Tambahkan anggota tim di tab "Tim" untuk bisa membagi pendapatan.
+              </p>
+            )}
+
+            <div className="flex gap-2 justify-end mt-4">
+              <Button variant="ghost" onClick={onCancel}>
+                Batal
+              </Button>
+              <Button
+                onClick={onSave}
+                className="bg-green-600 hover:bg-green-500"
+                isLoading={isSyncing}
+              >
+                {editingTransId ? "Update & Sync" : "Simpan & Sync"}
+              </Button>
+            </div>
           </div>
         </div>
       )}
@@ -615,6 +641,18 @@ export const AdminRevenue: React.FC<AdminRevenueProps> = ({
         </div>
       )}
 
+      {/* Search Bar */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+        <input
+          type="text"
+          placeholder="Cari transaksi, deskripsi, atau project..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="w-full bg-slate-800 border border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+        />
+      </div>
+
       {/* Transactions Table */}
       <div className="overflow-x-auto bg-slate-800 rounded-xl border border-slate-700">
         <table className="w-full text-left min-w-[900px] md:min-w-full">
@@ -635,8 +673,14 @@ export const AdminRevenue: React.FC<AdminRevenueProps> = ({
                   Belum ada data transaksi.
                 </td>
               </tr>
+            ) : filteredTransactions.length === 0 ? (
+              <tr>
+                <td colSpan={6} className="p-8 text-center text-slate-500">
+                  Tidak ada transaksi yang cocok dengan "{searchQuery}".
+                </td>
+              </tr>
             ) : (
-              transactions.map((t) => (
+              filteredTransactions.map((t) => (
                 <tr
                   key={t.id}
                   className="text-slate-300 hover:bg-slate-700/50 transition-colors"

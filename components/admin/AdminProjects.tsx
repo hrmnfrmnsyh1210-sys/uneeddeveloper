@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   Plus,
   Pencil,
@@ -7,6 +7,8 @@ import {
   Clock,
   TrendingUp,
   Calendar,
+  X,
+  Search,
 } from "lucide-react";
 import { Button } from "../Button";
 import { FormInput, FormSelect } from "../ui/FormInput";
@@ -77,6 +79,17 @@ export const AdminProjects: React.FC<AdminProjectsProps> = ({
   onCancel,
   onAdd,
 }) => {
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const filteredProjects = projects.filter((p) => {
+    const q = searchQuery.toLowerCase();
+    return (
+      p.name.toLowerCase().includes(q) ||
+      p.client.toLowerCase().includes(q) ||
+      p.status.toLowerCase().includes(q)
+    );
+  });
+
   // Calculate statistics
   const totalValue = projects.reduce((sum, p) => sum + p.value, 0);
   const completedValue = projects
@@ -224,60 +237,72 @@ export const AdminProjects: React.FC<AdminProjectsProps> = ({
       </div>
 
       {showAddProject && (
-        <div className="bg-slate-800 p-6 rounded-xl border border-slate-700 animate-in fade-in slide-in-from-top-4">
-          <h3 className="text-lg font-bold text-white mb-4">
-            {editingProjectId ? "Edit Project" : "Tambah Project"}
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-            <FormInput
-              placeholder="Nama Project"
-              value={newProject.name || ""}
-              onChange={(e) =>
-                setNewProject({ ...newProject, name: e.target.value })
-              }
-            />
-            <FormInput
-              placeholder="Klien"
-              value={newProject.client || ""}
-              onChange={(e) =>
-                setNewProject({ ...newProject, client: e.target.value })
-              }
-            />
-            <FormInput
-              type="number"
-              placeholder="Nilai (Rp)"
-              value={newProject.value || ""}
-              onChange={(e) =>
-                setNewProject({ ...newProject, value: Number(e.target.value) })
-              }
-            />
-            <FormInput
-              type="date"
-              value={newProject.deadline || ""}
-              onChange={(e) =>
-                setNewProject({ ...newProject, deadline: e.target.value })
-              }
-            />
-            <FormSelect
-              value={newProject.status}
-              onChange={(e) =>
-                setNewProject({ ...newProject, status: e.target.value as any })
-              }
-            >
-              {PROJECT_STATUSES.map((status) => (
-                <option key={status} value={status}>
-                  {status}
-                </option>
-              ))}
-            </FormSelect>
-          </div>
-          <div className="flex gap-2 justify-end">
-            <Button variant="ghost" onClick={onCancel}>
-              Batal
-            </Button>
-            <Button onClick={onSave} isLoading={isSyncing}>
-              {editingProjectId ? "Update & Sync" : "Simpan & Sync"}
-            </Button>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onCancel} />
+          <div className="relative w-full max-w-lg bg-slate-800 rounded-xl border border-slate-700 shadow-2xl p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold text-white">
+                {editingProjectId ? "Edit Project" : "Tambah Project"}
+              </h3>
+              <button
+                onClick={onCancel}
+                className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-700 rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              <FormInput
+                placeholder="Nama Project"
+                value={newProject.name || ""}
+                onChange={(e) =>
+                  setNewProject({ ...newProject, name: e.target.value })
+                }
+              />
+              <FormInput
+                placeholder="Klien"
+                value={newProject.client || ""}
+                onChange={(e) =>
+                  setNewProject({ ...newProject, client: e.target.value })
+                }
+              />
+              <FormInput
+                type="number"
+                placeholder="Nilai (Rp)"
+                value={newProject.value || ""}
+                onChange={(e) =>
+                  setNewProject({ ...newProject, value: Number(e.target.value) })
+                }
+              />
+              <FormInput
+                label="Tanggal Deadline"
+                type="date"
+                value={newProject.deadline || ""}
+                onChange={(e) =>
+                  setNewProject({ ...newProject, deadline: e.target.value })
+                }
+              />
+              <FormSelect
+                value={newProject.status}
+                onChange={(e) =>
+                  setNewProject({ ...newProject, status: e.target.value as any })
+                }
+              >
+                {PROJECT_STATUSES.map((status) => (
+                  <option key={status} value={status}>
+                    {status}
+                  </option>
+                ))}
+              </FormSelect>
+            </div>
+            <div className="flex gap-2 justify-end">
+              <Button variant="ghost" onClick={onCancel}>
+                Batal
+              </Button>
+              <Button onClick={onSave} isLoading={isSyncing}>
+                {editingProjectId ? "Update & Sync" : "Simpan & Sync"}
+              </Button>
+            </div>
           </div>
         </div>
       )}
@@ -559,6 +584,18 @@ export const AdminProjects: React.FC<AdminProjectsProps> = ({
         </div>
       )}
 
+      {/* Search Bar */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+        <input
+          type="text"
+          placeholder="Cari project, klien, atau status..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="w-full bg-slate-800 border border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+        />
+      </div>
+
       {/* Projects Table */}
       <div className="overflow-x-auto bg-slate-800 rounded-xl border border-slate-700">
         <table className="w-full text-left min-w-[800px] md:min-w-full">
@@ -579,8 +616,14 @@ export const AdminProjects: React.FC<AdminProjectsProps> = ({
                   Belum ada data project. Klik "Project Baru" untuk menambahkan.
                 </td>
               </tr>
+            ) : filteredProjects.length === 0 ? (
+              <tr>
+                <td colSpan={6} className="p-8 text-center text-slate-500">
+                  Tidak ada project yang cocok dengan "{searchQuery}".
+                </td>
+              </tr>
             ) : (
-              projects.map((p) => (
+              filteredProjects.map((p) => (
                 <tr
                   key={p.id}
                   className="text-slate-300 hover:bg-slate-700/50 transition-colors"

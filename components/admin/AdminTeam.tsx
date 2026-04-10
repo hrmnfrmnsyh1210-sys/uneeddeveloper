@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   Plus,
   Pencil,
@@ -6,6 +6,8 @@ import {
   Users,
   TrendingUp,
   DollarSign,
+  X,
+  Search,
 } from "lucide-react";
 import { Button } from "../Button";
 import { FormInput } from "../ui/FormInput";
@@ -66,6 +68,13 @@ export const AdminTeam: React.FC<AdminTeamProps> = ({
   getMemberRevenue,
   getTotalSplitRevenue,
 }) => {
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const filteredMembers = teamMembers.filter((m) => {
+    const q = searchQuery.toLowerCase();
+    return m.name.toLowerCase().includes(q) || m.role.toLowerCase().includes(q);
+  });
+
   const totalSplit = getTotalSplitRevenue();
 
   // Prepare chart data
@@ -142,33 +151,44 @@ export const AdminTeam: React.FC<AdminTeamProps> = ({
       </div>
 
       {showAddMember && (
-        <div className="bg-slate-800 p-6 rounded-xl border border-slate-700 animate-in fade-in slide-in-from-top-4">
-          <h3 className="text-lg font-bold text-white mb-4">
-            {editingMemberId ? "Edit Anggota" : "Tambah Anggota"}
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-            <FormInput
-              placeholder="Nama Lengkap"
-              value={newMember.name || ""}
-              onChange={(e) =>
-                setNewMember({ ...newMember, name: e.target.value })
-              }
-            />
-            <FormInput
-              placeholder="Role (Developer, Designer, PM, dll)"
-              value={newMember.role || ""}
-              onChange={(e) =>
-                setNewMember({ ...newMember, role: e.target.value })
-              }
-            />
-          </div>
-          <div className="flex gap-2 justify-end">
-            <Button variant="ghost" onClick={onCancel}>
-              Batal
-            </Button>
-            <Button onClick={onSave} isLoading={isSyncing}>
-              {editingMemberId ? "Update & Sync" : "Simpan & Sync"}
-            </Button>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onCancel} />
+          <div className="relative w-full max-w-lg bg-slate-800 rounded-xl border border-slate-700 shadow-2xl p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold text-white">
+                {editingMemberId ? "Edit Anggota" : "Tambah Anggota"}
+              </h3>
+              <button
+                onClick={onCancel}
+                className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-700 rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              <FormInput
+                placeholder="Nama Lengkap"
+                value={newMember.name || ""}
+                onChange={(e) =>
+                  setNewMember({ ...newMember, name: e.target.value })
+                }
+              />
+              <FormInput
+                placeholder="Role (Developer, Designer, PM, dll)"
+                value={newMember.role || ""}
+                onChange={(e) =>
+                  setNewMember({ ...newMember, role: e.target.value })
+                }
+              />
+            </div>
+            <div className="flex gap-2 justify-end">
+              <Button variant="ghost" onClick={onCancel}>
+                Batal
+              </Button>
+              <Button onClick={onSave} isLoading={isSyncing}>
+                {editingMemberId ? "Update & Sync" : "Simpan & Sync"}
+              </Button>
+            </div>
           </div>
         </div>
       )}
@@ -284,6 +304,18 @@ export const AdminTeam: React.FC<AdminTeamProps> = ({
         </div>
       )}
 
+      {/* Search Bar */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+        <input
+          type="text"
+          placeholder="Cari nama atau role anggota..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="w-full bg-slate-800 border border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+        />
+      </div>
+
       {teamMembers.length === 0 ? (
         <div className="bg-slate-800 rounded-xl border border-slate-700 p-12 text-center">
           <Users className="w-12 h-12 text-slate-600 mx-auto mb-3" />
@@ -303,7 +335,13 @@ export const AdminTeam: React.FC<AdminTeamProps> = ({
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-700">
-              {teamMembers.map((member, index) => {
+              {filteredMembers.length === 0 ? (
+                <tr>
+                  <td colSpan={4} className="p-8 text-center text-slate-500">
+                    Tidak ada anggota yang cocok dengan "{searchQuery}".
+                  </td>
+                </tr>
+              ) : filteredMembers.map((member, index) => {
                 const revenue = getMemberRevenue(member.id);
                 return (
                   <tr

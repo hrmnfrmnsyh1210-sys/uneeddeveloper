@@ -1,5 +1,5 @@
-import React from "react";
-import { Plus, Edit3, Trash2, ExternalLink, Image, X, Check, Loader2, Globe } from "lucide-react";
+import React, { useState } from "react";
+import { Plus, Edit3, Trash2, ExternalLink, Image, X, Check, Loader2, Globe, Search } from "lucide-react";
 import { PortfolioItem } from "../../types";
 import { PORTFOLIO_CATEGORIES } from "../../constants";
 
@@ -41,6 +41,17 @@ export const AdminPortfolio: React.FC<AdminPortfolioProps> = ({
   onCancel,
   onAdd,
 }) => {
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const filteredItems = portfolioItems.filter((item) => {
+    const q = searchQuery.toLowerCase();
+    return (
+      item.title.toLowerCase().includes(q) ||
+      item.category.toLowerCase().includes(q) ||
+      (item.description ?? "").toLowerCase().includes(q)
+    );
+  });
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -61,88 +72,110 @@ export const AdminPortfolio: React.FC<AdminPortfolioProps> = ({
         </button>
       </div>
 
-      {/* Form Tambah / Edit */}
+      {/* Modal Tambah / Edit */}
       {showAddPortfolio && (
-        <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6 space-y-4">
-          <h3 className="text-lg font-semibold text-white">
-            {editingPortfolioId ? "Edit Portfolio" : "Tambah Portfolio Baru"}
-          </h3>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm text-slate-400 mb-1.5">Judul Project *</label>
-              <input
-                type="text"
-                placeholder="Contoh: Finance Dashboard Pro"
-                value={newPortfolioItem.title ?? ""}
-                onChange={(e) => setNewPortfolioItem({ ...newPortfolioItem, title: e.target.value })}
-                className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm text-slate-400 mb-1.5">Kategori</label>
-              <select
-                value={newPortfolioItem.category ?? "Web App"}
-                onChange={(e) => setNewPortfolioItem({ ...newPortfolioItem, category: e.target.value })}
-                className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onCancel} />
+          <div className="relative w-full max-w-lg bg-slate-900 border border-slate-700 rounded-2xl p-6 space-y-4 shadow-2xl">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-white">
+                {editingPortfolioId ? "Edit Portfolio" : "Tambah Portfolio Baru"}
+              </h3>
+              <button
+                onClick={onCancel}
+                className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
               >
-                {PORTFOLIO_CATEGORIES.map((cat) => (
-                  <option key={cat} value={cat}>{cat}</option>
-                ))}
-              </select>
+                <X className="w-5 h-5" />
+              </button>
             </div>
-          </div>
 
-          <div>
-            <label className="block text-sm text-slate-400 mb-1.5">Link Project *</label>
-            <div className="relative">
-              <Globe className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-              <input
-                type="url"
-                placeholder="https://example.com/project"
-                value={newPortfolioItem.link ?? ""}
-                onChange={(e) => setNewPortfolioItem({ ...newPortfolioItem, link: e.target.value })}
-                className="w-full bg-slate-800 border border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm text-slate-400 mb-1.5">Judul Project *</label>
+                <input
+                  type="text"
+                  placeholder="Contoh: Finance Dashboard Pro"
+                  value={newPortfolioItem.title ?? ""}
+                  onChange={(e) => setNewPortfolioItem({ ...newPortfolioItem, title: e.target.value })}
+                  className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm text-slate-400 mb-1.5">Kategori</label>
+                <select
+                  value={newPortfolioItem.category ?? "Web App"}
+                  onChange={(e) => setNewPortfolioItem({ ...newPortfolioItem, category: e.target.value })}
+                  className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                >
+                  {PORTFOLIO_CATEGORIES.map((cat) => (
+                    <option key={cat} value={cat}>{cat}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm text-slate-400 mb-1.5">Link Project *</label>
+              <div className="relative">
+                <Globe className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                <input
+                  type="url"
+                  placeholder="https://example.com/project"
+                  value={newPortfolioItem.link ?? ""}
+                  onChange={(e) => setNewPortfolioItem({ ...newPortfolioItem, link: e.target.value })}
+                  className="w-full bg-slate-800 border border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+              <p className="text-xs text-slate-500 mt-1">Masukkan URL lengkap (https://...)</p>
+            </div>
+
+            <div>
+              <label className="block text-sm text-slate-400 mb-1.5">Deskripsi</label>
+              <textarea
+                placeholder="Jelaskan singkat tentang project ini..."
+                rows={3}
+                value={newPortfolioItem.description ?? ""}
+                onChange={(e) => setNewPortfolioItem({ ...newPortfolioItem, description: e.target.value })}
+                className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
               />
             </div>
-            <p className="text-xs text-slate-500 mt-1">Masukkan URL lengkap (https://...)</p>
-          </div>
 
-          <div>
-            <label className="block text-sm text-slate-400 mb-1.5">Deskripsi</label>
-            <textarea
-              placeholder="Jelaskan singkat tentang project ini..."
-              rows={3}
-              value={newPortfolioItem.description ?? ""}
-              onChange={(e) => setNewPortfolioItem({ ...newPortfolioItem, description: e.target.value })}
-              className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
-            />
-          </div>
-
-          <div className="flex justify-end gap-3 pt-2">
-            <button
-              onClick={onCancel}
-              className="flex items-center gap-2 px-4 py-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl transition-colors"
-            >
-              <X className="w-4 h-4" />
-              Batal
-            </button>
-            <button
-              onClick={onSave}
-              disabled={isSyncing}
-              className="flex items-center gap-2 px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-medium transition-colors disabled:opacity-50"
-            >
-              {isSyncing ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <Check className="w-4 h-4" />
-              )}
-              {editingPortfolioId ? "Simpan Perubahan" : "Simpan"}
-            </button>
+            <div className="flex justify-end gap-3 pt-2">
+              <button
+                onClick={onCancel}
+                className="flex items-center gap-2 px-4 py-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl transition-colors"
+              >
+                Batal
+              </button>
+              <button
+                onClick={onSave}
+                disabled={isSyncing}
+                className="flex items-center gap-2 px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-medium transition-colors disabled:opacity-50"
+              >
+                {isSyncing ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Check className="w-4 h-4" />
+                )}
+                {editingPortfolioId ? "Simpan Perubahan" : "Simpan"}
+              </button>
+            </div>
           </div>
         </div>
       )}
+
+      {/* Search Bar */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+        <input
+          type="text"
+          placeholder="Cari judul, kategori, atau deskripsi..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="w-full bg-slate-900 border border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+        />
+      </div>
 
       {/* List Portfolio */}
       {portfolioItems.length === 0 ? (
@@ -153,9 +186,17 @@ export const AdminPortfolio: React.FC<AdminPortfolioProps> = ({
             Klik "Tambah Portfolio" untuk menambahkan karya pertamamu.
           </p>
         </div>
+      ) : filteredItems.length === 0 ? (
+        <div className="text-center py-16 bg-slate-900/50 rounded-2xl border border-dashed border-slate-700">
+          <Search className="w-10 h-10 text-slate-600 mx-auto mb-3" />
+          <p className="text-slate-400 font-medium">Tidak ada hasil</p>
+          <p className="text-slate-500 text-sm mt-1">
+            Tidak ada portfolio yang cocok dengan "{searchQuery}".
+          </p>
+        </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {portfolioItems.map((item) => (
+          {filteredItems.map((item) => (
             <div
               key={item.id}
               className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden group hover:border-slate-600 transition-colors"
